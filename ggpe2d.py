@@ -82,7 +82,7 @@ def build_propagator(propagator: np.ndarray, h_lin_0: np.ndarray, nmax_1:int, nm
 
 class ggpe():
     
-    def __init__(self, nmax_1: int, nmax_2: int, long_1: int, long_2: int, tempo_type: str, t_max: int, t_obs: int, t_probe: int, t_noise: int, dt_frame: float,
+    def __init__(self, nmax_1: int, nmax_2: int, long_1: int, long_2: int, tempo_type: str, t_max: int, t_stationary: int, t_obs: int, t_probe: int, t_noise: int, dt_frame: float,
         gamma_exc: float, gamma_ph: float, noise: float, g0: float, detuning: float, omega_probe: float, omega_exc: float, omega_cav: float, rabi: float, k_z: float) -> None:
     
         self.nmax_1 = nmax_1
@@ -93,6 +93,7 @@ class ggpe():
         
         self.t_obs = t_obs
         self.t_noise = t_noise
+        self.t_stationary = t_stationary
         self.t_probe = t_probe
         self.t_max = t_max
         self.tempo_type = tempo_type
@@ -207,11 +208,11 @@ class ggpe():
         self.F_laser = self.F_laser * cp.exp(1j*C*self.THETA)\
             *cp.tanh(self.R/inner_waist)**C
             
-    def shear_layer(self, kx=1):
+    def shear_layer(self, kx: float=1):
         phase = cp.zeros(self.X.shape)
         phase = kx*self.X[:,:]
         phase[self.Y>0]=-phase[self.Y>0]
-        self.frame = self.frame*cp.exp(1j*phase)
+        self.F_laser = self.F_laser*cp.exp(1j*phase)
        
     def plane_wave(self, kx=0.5):
         phase = cp.zeros(self.X.shape)
@@ -232,7 +233,7 @@ class ggpe():
             return cp.exp(((t-t_up)/(t_up/2))**2) 
         else:
             return 1
-
+        
     def temp(self, t, name = "to_turning_pt", t_up=400, t_down=400) -> (cp.ndarray):
         if self.tempo_type == "to_turning_pt":
             return self.to_turning_point(t, t_up, t_down)
@@ -266,9 +267,12 @@ class ggpe():
             add_noise(self.phi1, self.phi2, rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv, self.noise_exc, self.noise_ph)
     
     def evolution(self, save: bool=True) -> (cp.ndarray, cp.ndarray, cp.ndarray):
+        stationary = 0
         if save:
             self.mean_cav_x_y_t = cp.zeros((self.nmax_2, self.nmax_1, self.n_frame), dtype = np.complex64)
             self.mean_exc_x_y_t = cp.zeros((self.nmax_2, self.nmax_1, self.n_frame), dtype = np.complex64)
+            self.mean_cav_x_y_stat = cp.zeros((self.nmax_2, self.nmax_1), dtype = np.complex64)
+            self.mean_exc_x_y_stat = cp.zeros((self.nmax_2, self.nmax_1), dtype = np.complex64)
             self.F_t = cp.zeros(self.n_frame, dtype = np.float32)
             r_t = 0
             i_frame = 0
@@ -279,6 +283,10 @@ class ggpe():
             self.split_step(plan_fft, k)
             if k%5000==0:
                 update_progress((k*self.dt) / self.t_max)
+            if k*self.dt > self.t_stationary and stationary<1:
+                self.mean_cav_x_y_stat = self.phi2
+                self.mean_exc_x_y_stat = self.phi1
+                stationary+=1
             if k*self.dt >= self.t_obs and save:
                 r_t += self.dt
                 if r_t>=self.dt_frame:
