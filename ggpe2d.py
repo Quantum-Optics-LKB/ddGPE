@@ -2,9 +2,10 @@ import numpy as np
 import scipy
 import cupy as cp
 from cupy.random import rand, randn
-from utilitiesf import update_progress
+#from utilitiesf import update_progress
 import cupyx.scipy.fftpack as fftpack
 import numba
+from tqdm import tqdm
 
 def build_fft_plan(A:np.ndarray) -> list:
         """Builds the FFT plan objects for propagation
@@ -277,12 +278,10 @@ class ggpe():
             r_t = 0
             i_frame = 0
         plan_fft = build_fft_plan(cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64))          
-        for k in range(int(self.t_max//self.dt)):
+        for k in tqdm(range(int(self.t_max//self.dt))):
             self.F_probe_t = self.F_probe * self.tempo_probe(k*self.dt)
             self.F_laser_t = self.F_laser * self.temp(k*self.dt)
             self.split_step(plan_fft, k)
-            if k%5000==0:
-                update_progress((k*self.dt) / self.t_max)
             if k*self.dt > self.t_stationary and stationary<1:
                 self.mean_cav_x_y_stat = self.phi2
                 self.mean_exc_x_y_stat = self.phi1
