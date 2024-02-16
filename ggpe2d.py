@@ -267,7 +267,7 @@ class ggpe():
             rand2 = cp.random.randn(self.nmax_2, self.nmax_1) + 1j*cp.random.randn(self.nmax_2, self.nmax_1)
             add_noise(self.phi1, self.phi2, rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv, self.noise_exc, self.noise_ph)
     
-    def evolution(self, save: bool=True) -> (cp.ndarray, cp.ndarray, cp.ndarray):
+    def evolution(self, save: bool=True) -> (cp.ndarray):#, cp.ndarray, cp.ndarray):
         stationary = 0
         if save:
             self.mean_cav_x_y_t = cp.zeros((self.nmax_2, self.nmax_1, self.n_frame), dtype = np.complex64)
