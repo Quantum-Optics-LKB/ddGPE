@@ -124,6 +124,14 @@ class ggpe():
         self.F_probe = cp.ones((nmax_2, nmax_1), dtype=np.complex64)
         self.phi1 = cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64)
         self.phi2 = cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64)
+        #-----------------------------------oscar's ideas-----------------------------------
+        #self.phi12 = cp.array([self.phi1, self.phi2], dtype=np.complex64) # Merging both wavefunctions in the same object: phi12[0]=phi1, phi12[1]=phi2  
+        #or is it better to directly
+        #self.phi12 = cp.array([cp.zeros((self.nmax_1, self.nmax_2), cp.zeros((self.nmax_1, self.nmax_2)], dtype=np.complex64)
+        #or inspired from h_lin_0 def
+        #self.phi12 = np.zeros((self.nmax_2, self.nmax_1, 2), dtype = np.complex64) #self.phi12[:, :, 0] = self.phi1 and self.phi12[:, :, 1] = self.phi2
+        #-----------------------------------------------------------------------------------
+        
         
         #Definition of the enrgies, time step and the linear evolution operator.
         k_1 = np.linspace(-2*np.pi/self.long_1*self.nmax_1/2, 2*np.pi/self.long_1*(self.nmax_1/2-1), self.nmax_1)
