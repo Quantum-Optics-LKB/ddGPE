@@ -4,7 +4,7 @@ import numpy as np
 import cupy as cp
 import matplotlib.pyplot as plt
 import matplotlib
-from ddGPE_fork_oscar.ggpe2d import ggpe
+from ggpe2d import ggpe
 from skimage.restoration import unwrap_phase
 import os
 import scipy
