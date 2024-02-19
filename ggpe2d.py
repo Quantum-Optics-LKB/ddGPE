@@ -322,6 +322,6 @@ class ggpe():
                     self.mean_exc_x_y_t[:,:,i_frame] = self.phi1
                     #self.mean_cav_x_y_t[:,:,i_frame] = self.phi12[:,:,1]
                     #self.mean_exc_x_y_t[:,:,i_frame] = self.phi12[:,:,0]
-                    self.F_t[i_frame] = cp.max(self.F_laser_t)
+                    self.F_t[i_frame] = cp.max(cp.abs(self.F_laser_t))
                     i_frame += 1
                     r_t = 0
