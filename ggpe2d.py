@@ -122,15 +122,15 @@ class ggpe():
         
         self.F_laser = cp.ones((nmax_2, nmax_1), dtype=np.complex64)
         self.F_probe = cp.ones((nmax_2, nmax_1), dtype=np.complex64)
-        self.phi1 = cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64)
-        self.phi2 = cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64)
+        # self.phi1 = cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64)
+        # self.phi2 = cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64)
         #-----------------------------------oscar's ideas-----------------------------------
         #self.phi12 = cp.array([self.phi1, self.phi2], dtype=np.complex64) # Merging both wavefunctions in the same object: phi12[0]=phi1, phi12[1]=phi2  
         #or is it better to directly
         #self.phi12 = cp.array([cp.zeros((self.nmax_1, self.nmax_2), cp.zeros((self.nmax_1, self.nmax_2)], dtype=np.complex64)
         
         #or inspired from h_lin_0 def I WILL COMMIT TO THIS CHOICE FOR THE TIME BEING
-        #self.phi12 = np.zeros((self.nmax_2, self.nmax_1, 2), dtype = np.complex64) #self.phi12[:, :, 0] = self.phi1 and self.phi12[:, :, 1] = self.phi2
+        self.phi12 = cp.zeros((self.nmax_2, self.nmax_1, 2), dtype = np.complex64) #self.phi12[:, :, 0] = self.phi1 and self.phi12[:, :, 1] = self.phi2
         #-----------------------------------------------------------------------------------
         
         
@@ -254,45 +254,45 @@ class ggpe():
     
     def split_step(self, plan_fft, k: int) -> None:
         #REAL_SPACE
-        resonant_excitation(self.phi2, self.F_laser_t, self.dt)
+        # resonant_excitation(self.phi2, self.F_laser_t, self.dt)
+        # if k*self.dt>self.t_probe:
+        #    probe_excitation(self.phi2, self.F_probe_t, self.dt)
+        # single_particle_pot(self.phi2, self.dt, self.v_gamma)
+        # non_linearity(self.phi1, self.dt, self.g0)
+        resonant_excitation(self.phi12[:,:,1], self.F_laser_t, self.dt)
         if k*self.dt>self.t_probe:
-            probe_excitation(self.phi2, self.F_probe_t, self.dt)
-        single_particle_pot(self.phi2, self.dt, self.v_gamma)
-        non_linearity(self.phi1, self.dt, self.g0)
-        #resonant_excitation(self.phi12[:,:,1], self.F_laser_t, self.dt)
-        #if k*self.dt>self.t_probe:
-        #    probe_excitation(self.phi12[:,:,1], self.F_probe_t, self.dt)
-        #single_particle_pot(self.phi12[:,:,1], self.dt, self.v_gamma)
-        #non_linearity(self.phi12[:,:,0], self.dt, self.g0)
+           probe_excitation(self.phi12[:,:,1], self.F_probe_t, self.dt)
+        single_particle_pot(self.phi12[:,:,1], self.dt, self.v_gamma)
+        non_linearity(self.phi12[:,:,0], self.dt, self.g0)
         
         #FOURIER_SPACE
-        plan_fft.fft(self.phi1, self.phi1, cp.cuda.cufft.CUFFT_FORWARD)
-        plan_fft.fft(self.phi2, self.phi2, cp.cuda.cufft.CUFFT_FORWARD)
-        cp.multiply(self.phi1, self.propagator[:, :, 0, 0], self.phi1)
-        self.phi1 += cp.multiply(self.phi2, self.propagator[:, :, 0, 1])
-        cp.multiply(self.phi2, self.propagator[:, :, 1, 1], self.phi2)
-        self.phi2 += cp.multiply(self.phi1, self.propagator[:, :, 1, 0])
-        plan_fft.fft(self.phi1, self.phi1, cp.cuda.cufft.CUFFT_INVERSE)
-        plan_fft.fft(self.phi2, self.phi2, cp.cuda.cufft.CUFFT_INVERSE)
-        self.phi1 /= np.prod(self.phi1.shape)
-        self.phi2 /= np.prod(self.phi2.shape)
-        #plan_fft.fft(self.phi12[:,:,0],self.phi12[:,:,0],cp.cuda.cufft.CUFFT_FORWARD)
-        #plan_fft.fft(self.phi12[:,:,1],self.phi12[:,:,1],cp.cuda.cufft.CUFFT_FORWARD)
-        #cp.multiply(self.phi12[:,:,0], self.propagator[:, :, 0, 0], self.phi12[:,:,0])
-        #self.phi12[:,:,0] += cp.multiply(self.phi12[:,:,1], self.propagator[:, :, 0, 1])
-        #cp.multiply(self.phi12[:,:,1], self.propagator[:, :, 1, 1], self.phi12[:,:,1])
-        #self.phi12[:,:,1] += cp.multiply(self.phi12[:,:,0], self.propagator[:, :, 1, 0])
-        #plan_fft.fft(self.phi12[:,:,0], self.phi12[:,:,0], cp.cuda.cufft.CUFFT_INVERSE)
-        #plan_fft.fft(self.phi12[:,:,1], self.phi12[:,:,1], cp.cuda.cufft.CUFFT_INVERSE)
-        #self.phi12[:,:,0] /= np.prod(self.phi12[:,:,0].shape)
-        #self.phi12[:,:,1] /= np.prod(self.phi12[:,:,1].shape)
+        # plan_fft.fft(self.phi1, self.phi1, cp.cuda.cufft.CUFFT_FORWARD)
+        # plan_fft.fft(self.phi2, self.phi2, cp.cuda.cufft.CUFFT_FORWARD)
+        # cp.multiply(self.phi1, self.propagator[:, :, 0, 0], self.phi1)
+        # self.phi1 += cp.multiply(self.phi2, self.propagator[:, :, 0, 1])
+        # cp.multiply(self.phi2, self.propagator[:, :, 1, 1], self.phi2)
+        # self.phi2 += cp.multiply(self.phi1, self.propagator[:, :, 1, 0])
+        # plan_fft.fft(self.phi1, self.phi1, cp.cuda.cufft.CUFFT_INVERSE)
+        # plan_fft.fft(self.phi2, self.phi2, cp.cuda.cufft.CUFFT_INVERSE)
+        # self.phi1 /= np.prod(self.phi1.shape)
+        # self.phi2 /= np.prod(self.phi2.shape)
+        plan_fft.fft(self.phi12[:,:,0],self.phi12[:,:,0],cp.cuda.cufft.CUFFT_FORWARD)
+        plan_fft.fft(self.phi12[:,:,1],self.phi12[:,:,1],cp.cuda.cufft.CUFFT_FORWARD)
+        cp.multiply(self.phi12[:,:,0], self.propagator[:, :, 0, 0], self.phi12[:,:,0])
+        self.phi12[:,:,0] += cp.multiply(self.phi12[:,:,1], self.propagator[:, :, 0, 1])
+        cp.multiply(self.phi12[:,:,1], self.propagator[:, :, 1, 1], self.phi12[:,:,1])
+        self.phi12[:,:,1] += cp.multiply(self.phi12[:,:,0], self.propagator[:, :, 1, 0])
+        plan_fft.fft(self.phi12[:,:,0], self.phi12[:,:,0], cp.cuda.cufft.CUFFT_INVERSE)
+        plan_fft.fft(self.phi12[:,:,1], self.phi12[:,:,1], cp.cuda.cufft.CUFFT_INVERSE)
+        self.phi12[:,:,0] /= np.prod(self.phi12[:,:,0].shape)
+        self.phi12[:,:,1] /= np.prod(self.phi12[:,:,1].shape)
         
         #NOISE
         if k*self.dt >= self.t_noise:
             rand1 = cp.random.randn(self.nmax_2, self.nmax_1) + 1j*cp.random.randn(self.nmax_2, self.nmax_1) 
             rand2 = cp.random.randn(self.nmax_2, self.nmax_1) + 1j*cp.random.randn(self.nmax_2, self.nmax_1)
-            add_noise(self.phi1, self.phi2, rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv, self.noise_exc, self.noise_ph)
-            #add_noise(self.phi12[:,:,0], self.phi12[:,:,1], rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv, self.noise_exc, self.noise_ph)
+            # add_noise(self.phi1, self.phi2, rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv, self.noise_exc, self.noise_ph)
+            add_noise(self.phi12[:,:,0], self.phi12[:,:,1], rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv, self.noise_exc, self.noise_ph)
     
     def evolution(self, save: bool=True) -> (cp.ndarray):#, cp.ndarray, cp.ndarray):
         stationary = 0
@@ -310,18 +310,18 @@ class ggpe():
             self.F_laser_t = self.F_laser * self.temp(k*self.dt)
             self.split_step(plan_fft, k)
             if k*self.dt > self.t_stationary and stationary<1:
-                self.mean_cav_x_y_stat = self.phi2
-                self.mean_exc_x_y_stat = self.phi1
-                #self.mean_cav_x_y_stat = self.phi12[:,:,1]
-                #self.mean_exc_x_y_stat = self.phi12[:,:,0]
+                # self.mean_cav_x_y_stat = self.phi2
+                # self.mean_exc_x_y_stat = self.phi1
+                self.mean_cav_x_y_stat = self.phi12[:,:,1]
+                self.mean_exc_x_y_stat = self.phi12[:,:,0]
                 stationary+=1
             if k*self.dt >= self.t_obs and save:
                 r_t += self.dt
                 if r_t>=self.dt_frame:
-                    self.mean_cav_x_y_t[:,:,i_frame] = self.phi2
-                    self.mean_exc_x_y_t[:,:,i_frame] = self.phi1
-                    #self.mean_cav_x_y_t[:,:,i_frame] = self.phi12[:,:,1]
-                    #self.mean_exc_x_y_t[:,:,i_frame] = self.phi12[:,:,0]
+                    # self.mean_cav_x_y_t[:,:,i_frame] = self.phi2
+                    # self.mean_exc_x_y_t[:,:,i_frame] = self.phi1
+                    self.mean_cav_x_y_t[:,:,i_frame] = self.phi12[:,:,1]
+                    self.mean_exc_x_y_t[:,:,i_frame] = self.phi12[:,:,0]
                     self.F_t[i_frame] = cp.max(cp.abs(self.F_laser_t))
                     i_frame += 1
                     r_t = 0
