@@ -81,6 +81,12 @@ def build_propagator(propagator: np.ndarray, h_lin_0: np.ndarray, nmax_1:int, nm
         for j in range(nmax_2):
             propagator[j,i,:,:] = scipy.linalg.expm(-1j*h_lin_0[j,i,:,:]*dt)
 
+# def build_propagator_diag(propagator_diag: np.ndarray, h_lin_0_diag: np.ndarray, nmax_1:int, nmax_2: int, dt: float):     NOT SURE WE NEED TO DEFINE A FUNCTION FOR THIS
+#    propagator_diag[:,:,0,0] = np.exp(-1j*h_lin_0_diag[:,:,0,0]*dt)
+#    propagator_diag[:,:,1,1] = np.exp(-1j*h_lin_0_diag[:,:,1,1]*dt)
+
+
+
 class ggpe():
     
     def __init__(self, nmax_1: int, nmax_2: int, long_1: int, long_2: int, tempo_type: str, t_max: int, t_stationary: int, t_obs: int, t_probe: int, t_noise: int, dt_frame: float,
@@ -184,6 +190,41 @@ class ggpe():
         build_propagator(self.propagator, self.h_lin_0, self.nmax_1, self.nmax_2, self.dt)
         self.propagator = cp.asarray(self.propagator)
         
+        #Build diagonalised propagator 
+        
+        # self.h_lin_0_diag = cp.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype = np.complex64) 
+        # self.h_lin_0_diag[:, :, 0, 0] = 0.5*(self.omega[:, :, 0] + self.omega[:, :, 1] - 0.5*1j* (self.gamma[:, :, 0] + self.gamma[:, :, 1]) + cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2))
+        # self.h_lin_0_diag[:, :, 1, 1] = 0.5*(self.omega[:, :, 0] + self.omega[:, :, 1] - 0.5*1j* (self.gamma[:, :, 0] + self.gamma[:, :, 1]) - cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2))
+        # self.propagator_diag = cp.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype=np.complex64)
+        
+        # i think we do not need to build a function for this(?) -> build_propagator_diag(self.propagator, self.h_lin_0, self.nmax_1, self.nmax_2, self.dt)
+     
+        # propagator_diag[:,:,0,0] = cp.exp(-1j*h_lin_0_diag[:,:,0,0]*dt)
+        # propagator_diag[:,:,1,1] = cp.exp(-1j*h_lin_0_diag[:,:,1,1]*dt)
+        # self.propagator_diag = cp.asarray(self.propagator_diag)
+        
+        # change of basis function
+        # self.pol_basis_vector_kspace = cp.zeros((2, 2, self.nmax_1, self.nmax_2), dtype=np.complex64)    #pol_basis_vector_kspace[0,:,:,:] = |+> and pol_basis_vector_kspace[1,:,:,:] = |-> in each point of k-space
+        # self.pol_basis_vector_kspace[0, 0,:,:] = -self.rabi/(0.5*(self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1) - cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2)))
+        # self.pol_basis_vector_kspace[0, 1,:,:] = 1
+        # self.pol_basis_vector_kspace[1, 0,:,:] = -self.rabi/(0.5*(self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1) + cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2)))
+        # self.pol_basis_vector_kspace[1, 1,:,:] = 1
+        # self.pol_basis_vector_kspace[0,:,:,:] = self.pol_basis_vector_kspace[0,:,:,:] / cp.linalg.norm(self.pol_basis_vector_kspace[0,:,:,:], axis=0, keepdims=True)
+        # self.pol_basis_vector_kspace[1,:,:,:] = self.pol_basis_vector_kspace[1,:,:,:] / cp.linalg.norm(self.pol_basis_vector_kspace[1,:,:,:], axis=0, keepdims=True)
+        
+        
+        #WHERE TO DEFINE THESE FUNCTIONS?
+        
+        # def exc_cav_to_pol_basis(phi1: cp.ndarray, phi2: cp.ndarray) -> (cp.ndarray):
+        #     phi1 = cp.multiply(self.pol_basis_vector_kspace[0, 0,:,:], phi1) + cp.multiply(self.pol_basis_vector_kspace[0, 1,:,:], phi2)
+        #     phi2 = cp.multiply(self.pol_basis_vector_kspace[1, 0,:,:], phi1) + cp.multiply(self.pol_basis_vector_kspace[1, 1,:,:], phi2)
+        #     return phi1, phi2
+        # def pol_to_exc_cav_basis(phi1: cp.ndarray, phi2: cp.ndarray) -> (cp.ndarray):
+        #     phi1 = cp.multiply(cp.conj(self.pol_basis_vector_kspace[0, 0,:,:]), phi1) + cp.multiply(cp.conj(self.pol_basis_vector_kspace[1, 0,:,:]), phi2)
+        #     phi2 = cp.multiply(cp.conj(self.pol_basis_vector_kspace[0, 1,:,:]), phi1) + cp.multiply(cp.conj(self.pol_basis_vector_kspace[1, 1,:,:]), phi2)
+        #     return phi1, phi2
+        
+        
         self.v_gamma = cp.zeros((self.nmax_2, self.nmax_1), dtype=np.complex64)
         delta_gamma_1 = self.long_1/25
         delta_gamma_2 = self.long_2/25
@@ -271,6 +312,9 @@ class ggpe():
         #FOURIER_SPACE
         plan_fft.fft(phi1, phi1, cp.cuda.cufft.CUFFT_FORWARD)
         plan_fft.fft(phi2, phi2, cp.cuda.cufft.CUFFT_FORWARD)
+        
+        #here is where we want to change basis
+        
         cp.multiply(phi1, self.propagator[:, :, 0, 0], phi1)
         phi1 += cp.multiply(phi2, self.propagator[:, :, 0, 1])
         cp.multiply(phi2, self.propagator[:, :, 1, 1], phi2)
