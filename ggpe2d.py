@@ -15,7 +15,7 @@ def build_fft_plan(A:np.ndarray) -> list:
             list: A list containing the FFT plans
         """
         plan_fft = fftpack.get_fft_plan(
-            A, shape=A.shape, axes=(0, 1), value_type='C2C')
+            A, shape=(A.shape[-2], A.shape[-1]), axes=(-2, -1), value_type='C2C')
         return plan_fft
 
 @cp.fuse(kernel_name="non_linearity")
@@ -84,6 +84,29 @@ def build_propagator(propagator: np.ndarray, h_lin_0: np.ndarray, nmax_1:int, nm
 # def build_propagator_diag(propagator_diag: np.ndarray, h_lin_0_diag: np.ndarray, nmax_1:int, nmax_2: int, dt: float):     NOT SURE WE NEED TO DEFINE A FUNCTION FOR THIS
 #    propagator_diag[:,:,0,0] = np.exp(-1j*h_lin_0_diag[:,:,0,0]*dt)
 #    propagator_diag[:,:,1,1] = np.exp(-1j*h_lin_0_diag[:,:,1,1]*dt)
+
+
+@cp.fuse(kernel_name="linear_step")
+def linear_step(phi1: cp.ndarray, phi2: cp.ndarray, propagator_diag: cp.ndarray, pol_basis_vector_kspace: cp.ndarray) -> None:
+    """A fused kernel to apply the linear step in the diagonal polariton basis
+
+    Args:
+        phi (cp.ndarray): The field in ph,exc basis (in k-space)
+        propagator (cp.ndarray): Propagator in the diagonal polariton basis
+        pol_basis_vector_kspace (cp.ndarray): change of basis matrix
+    """
+    
+    phi1 = cp.multiply(pol_basis_vector_kspace[0, 0,:,:], phi1) + cp.multiply(pol_basis_vector_kspace[0, 1,:,:], phi2)
+    phi2 = cp.multiply(pol_basis_vector_kspace[1, 0,:,:], phi1) + cp.multiply(pol_basis_vector_kspace[1, 1,:,:], phi2)
+    
+    phi1 = cp.multiply(propagator_diag[:, :, 0, 0], phi1)
+    phi2 = cp.multiply(propagator_diag[:, :, 1, 1], phi2)
+    
+    phi1 = cp.multiply(cp.conj(pol_basis_vector_kspace[0, 0,:,:]), phi1) + cp.multiply(cp.conj(pol_basis_vector_kspace[1, 0,:,:]), phi2)
+    phi2 = cp.multiply(cp.conj(pol_basis_vector_kspace[0, 1,:,:]), phi1) + cp.multiply(cp.conj(pol_basis_vector_kspace[1, 1,:,:]), phi2)
+
+
+
 
 
 
@@ -213,17 +236,6 @@ class ggpe():
         # self.pol_basis_vector_kspace[1,:,:,:] = self.pol_basis_vector_kspace[1,:,:,:] / cp.linalg.norm(self.pol_basis_vector_kspace[1,:,:,:], axis=0, keepdims=True)
         
         
-        #WHERE TO DEFINE THESE FUNCTIONS?
-        
-        # def exc_cav_to_pol_basis(phi1: cp.ndarray, phi2: cp.ndarray) -> (cp.ndarray):
-        #     phi1 = cp.multiply(self.pol_basis_vector_kspace[0, 0,:,:], phi1) + cp.multiply(self.pol_basis_vector_kspace[0, 1,:,:], phi2)
-        #     phi2 = cp.multiply(self.pol_basis_vector_kspace[1, 0,:,:], phi1) + cp.multiply(self.pol_basis_vector_kspace[1, 1,:,:], phi2)
-        #     return phi1, phi2
-        # def pol_to_exc_cav_basis(phi1: cp.ndarray, phi2: cp.ndarray) -> (cp.ndarray):
-        #     phi1 = cp.multiply(cp.conj(self.pol_basis_vector_kspace[0, 0,:,:]), phi1) + cp.multiply(cp.conj(self.pol_basis_vector_kspace[1, 0,:,:]), phi2)
-        #     phi2 = cp.multiply(cp.conj(self.pol_basis_vector_kspace[0, 1,:,:]), phi1) + cp.multiply(cp.conj(self.pol_basis_vector_kspace[1, 1,:,:]), phi2)
-        #     return phi1, phi2
-        
         
         self.v_gamma = cp.zeros((self.nmax_2, self.nmax_1), dtype=np.complex64)
         delta_gamma_1 = self.long_1/25
@@ -313,16 +325,21 @@ class ggpe():
         plan_fft.fft(phi1, phi1, cp.cuda.cufft.CUFFT_FORWARD)
         plan_fft.fft(phi2, phi2, cp.cuda.cufft.CUFFT_FORWARD)
         
-        #here is where we want to change basis
-        
         cp.multiply(phi1, self.propagator[:, :, 0, 0], phi1)
         phi1 += cp.multiply(phi2, self.propagator[:, :, 0, 1])
         cp.multiply(phi2, self.propagator[:, :, 1, 1], phi2)
         phi2 += cp.multiply(phi1, self.propagator[:, :, 1, 0])
+        
+        # linear_step(phi1, phi2, self.propagator_diag, self.pol_basis_vector_kspace)
+        
         plan_fft.fft(phi1, phi1, cp.cuda.cufft.CUFFT_INVERSE)
         plan_fft.fft(phi2, phi2, cp.cuda.cufft.CUFFT_INVERSE)
         phi1 /= np.prod(phi1.shape)
         phi2 /= np.prod(phi2.shape)
+        
+        
+        
+        # below was stuff for merging phis
         # plan_fft.fft(self.phi12[:,:,0],self.phi12[:,:,0],cp.cuda.cufft.CUFFT_FORWARD)
         # plan_fft.fft(self.phi12[:,:,1],self.phi12[:,:,1],cp.cuda.cufft.CUFFT_FORWARD)
         # cp.multiply(self.phi12[:,:,0], self.propagator[:, :, 0, 0], self.phi12[:,:,0])
