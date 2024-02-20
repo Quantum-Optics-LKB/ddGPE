@@ -75,15 +75,12 @@ def add_noise(phi1: cp.ndarray, phi2: cp.ndarray, rand1: cp.ndarray, rand2: cp.n
     phi1 += noise_exc*cp.sqrt(gamma_exc/4*dv)*rand1
     phi2 += noise_ph*cp.sqrt((v_gamma+gamma_ph)/4*dv)*rand2
 
-@numba.jit(parallel = True)
-def build_propagator(propagator: np.ndarray, h_lin_0: np.ndarray, nmax_1:int, nmax_2: int, dt: float):
-    for i in range(nmax_1):
-        for j in range(nmax_2):
-            propagator[j,i,:,:] = scipy.linalg.expm(-1j*h_lin_0[j,i,:,:]*dt)
+# @numba.jit(parallel = True)
+# def build_propagator(propagator: np.ndarray, h_lin_0: np.ndarray, nmax_1:int, nmax_2: int, dt: float):
+#     for i in range(nmax_1):
+#         for j in range(nmax_2):
+#             propagator[j,i,:,:] = scipy.linalg.expm(-1j*h_lin_0[j,i,:,:]*dt)
 
-# def build_propagator_diag(propagator_diag: np.ndarray, h_lin_0_diag: np.ndarray, nmax_1:int, nmax_2: int, dt: float):     NOT SURE WE NEED TO DEFINE A FUNCTION FOR THIS
-#    propagator_diag[:,:,0,0] = np.exp(-1j*h_lin_0_diag[:,:,0,0]*dt)
-#    propagator_diag[:,:,1,1] = np.exp(-1j*h_lin_0_diag[:,:,1,1]*dt)
 
 
 @cp.fuse(kernel_name="linear_step")
@@ -142,15 +139,15 @@ class ggpe():
         self.noise_ph = noise
         self.g0 = g0
         
-        self.frame = cp.ones((nmax_2, nmax_1), dtype=np.complex64)
+        self.frame = cp.ones((nmax_2, nmax_1), dtype=cp.complex64)
         self.x_1 = cp.linspace(-long_1/2, +long_1/2, nmax_1, dtype = float)
         self.x_2 = cp.linspace(-long_2/2, +long_2/2, nmax_2, dtype = float)
         self.X, self.Y = cp.meshgrid(self.x_1, self.x_2)
         self.R = cp.hypot(self.X,self.Y)
         self.THETA = cp.angle(self.X+1j*self.Y)
         
-        self.F_laser = cp.ones((nmax_2, nmax_1), dtype=np.complex64)
-        self.F_probe = cp.ones((nmax_2, nmax_1), dtype=np.complex64)
+        self.F_laser = cp.ones((nmax_2, nmax_1), dtype=cp.complex64)
+        self.F_probe = cp.ones((nmax_2, nmax_1), dtype=cp.complex64)
         #self.phi1 = cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64)
         #self.phi2 = cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64)
         #-----------------------------------oscar's ideas-----------------------------------
@@ -159,42 +156,42 @@ class ggpe():
         #self.phi12 = cp.array([cp.zeros((self.nmax_1, self.nmax_2), cp.zeros((self.nmax_1, self.nmax_2)], dtype=np.complex64)
         
         #or inspired from h_lin_0 def I WILL COMMIT TO THIS CHOICE FOR THE TIME BEING
-        self.phi12 = cp.zeros((2, self.nmax_1, self.nmax_2), dtype = np.complex64) #self.phi12[:, :, 0] = self.phi1 and self.phi12[:, :, 1] = self.phi2
+        self.phi12 = cp.zeros((2, self.nmax_1, self.nmax_2), dtype = cp.complex64) #self.phi12[:, :, 0] = self.phi1 and self.phi12[:, :, 1] = self.phi2
         
         #-----------------------------------------------------------------------------------
         
         
         #Definition of the enrgies, time step and the linear evolution operator.
-        k_1 = np.linspace(-2*np.pi/self.long_1*self.nmax_1/2, 2*np.pi/self.long_1*(self.nmax_1/2-1), self.nmax_1)
-        k_2 = np.linspace(-2*np.pi/self.long_2*self.nmax_2/2, 2*np.pi/self.long_2*(self.nmax_2/2-1), self.nmax_2)
-        K_1, K_2 = np.meshgrid(k_1, k_2)
+        k_1 = cp.linspace(-2*cp.pi/self.long_1*self.nmax_1/2, 2*cp.pi/self.long_1*(self.nmax_1/2-1), self.nmax_1)
+        k_2 = cp.linspace(-2*cp.pi/self.long_2*self.nmax_2/2, 2*cp.pi/self.long_2*(self.nmax_2/2-1), self.nmax_2)
+        K_1, K_2 = cp.meshgrid(k_1, k_2)
         
-        self.gamma = np.zeros((self.nmax_2, self.nmax_1, 2), dtype=np.complex64)
+        self.gamma = cp.zeros((self.nmax_2, self.nmax_1, 2), dtype=cp.complex64)
         self.gamma[:, :, 0] = self.gamma_exc
         self.gamma[:, :, 1] = self.gamma_ph
 
-        self.omega_LP_0 = (self.omega_exc + self.omega_cav)/2 - 0.5 * np.sqrt((self.omega_exc - self.omega_cav)**2 + 4*self.rabi**2)
+        self.omega_LP_0 = (self.omega_exc + self.omega_cav)/2 - 0.5 * cp.sqrt((self.omega_exc - self.omega_cav)**2 + 4*self.rabi**2)
         self.omega_pump = self.detuning + self.omega_LP_0
         omega_turning_field = self.omega_pump
         self.omega_pump *= 0
         self.omega_probe = omega_probe
-        self.omega = np.zeros((self.nmax_2, self.nmax_1, 2), dtype=np.complex64)
+        self.omega = cp.zeros((self.nmax_2, self.nmax_1, 2), dtype=cp.complex64)
         self.omega[:, :, 0] = self.omega_exc - omega_turning_field
-        self.omega[:,:,1] = self.omega_cav * (np.sqrt(1 + (K_1**2 + K_2**2)/self.k_z**2)) - omega_turning_field
+        self.omega[:,:,1] = self.omega_cav * (cp.sqrt(1 + (K_1**2 + K_2**2)/self.k_z**2)) - omega_turning_field
 
         #todo: define m_LP from k_z, hbar, C02, outside of the class
         dk = np.abs(k_1[1]-k_1[0])
         LB = (self.omega[:,self.nmax_1//2,0] + self.omega[:,self.nmax_1//2,1])/2 - 0.5 * \
-            np.sqrt((self.omega[:,self.nmax_1//2,1] - self.omega[:,self.nmax_1//2,0])**2 + 4*self.rabi**2)
+            cp.sqrt((self.omega[:,self.nmax_1//2,1] - self.omega[:,self.nmax_1//2,0])**2 + 4*self.rabi**2)
         h_bar = 0.654 #[meV*ps]
-        E_lp_kk = np.gradient(np.gradient(h_bar*LB,dk),dk)
+        E_lp_kk = cp.gradient(cp.gradient(h_bar*LB,dk),dk)
         self.m_LP = h_bar**2/E_lp_kk[self.nmax_2//2]
         
-        self.omega[:, :, 0] = np.fft.fftshift(self.omega[:, :, 0])
-        self.omega[:, :, 1] = np.fft.fftshift(self.omega[:, :, 1])
+        self.omega[:, :, 0] = cp.fft.fftshift(self.omega[:, :, 0])
+        self.omega[:, :, 1] = cp.fft.fftshift(self.omega[:, :, 1])
         
-        C2 = np.sqrt((self.omega[:, :, 1]-self.omega[:, :, 0])**2 + 4*self.rabi**2) + (self.omega[:, :, 1]-self.omega[:, :, 0])
-        C2 /= 2*np.sqrt((self.omega[:, :, 1]-self.omega[:, :, 0])**2 + 4*self.rabi**2)
+        C2 = cp.sqrt((self.omega[:, :, 1]-self.omega[:, :, 0])**2 + 4*self.rabi**2) + (self.omega[:, :, 1]-self.omega[:, :, 0])
+        C2 /= 2*cp.sqrt((self.omega[:, :, 1]-self.omega[:, :, 0])**2 + 4*self.rabi**2)
         self.C2 = C2
         
         #Max energy in the system to define dt
@@ -203,37 +200,38 @@ class ggpe():
         cst = 4 #increase cst if you see fluctuations
         self.dt = 1/(omega_max*cst)
         
-        self.h_lin_0 = np.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype = np.complex64) 
-        self.h_lin_0[:, :, 0, 0] = self.omega[:, :, 0] - 0.5*1j*self.gamma[:, :, 0]
-        self.h_lin_0[:, :, 1, 1] = self.omega[:, :, 1] - 0.5*1j*self.gamma[:, :, 1]
-        self.h_lin_0[:, :, 0, 1] = self.rabi
-        self.h_lin_0[:, :, 1, 0] = self.rabi
+        # self.h_lin_0 = np.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype = np.complex64) 
+        # self.h_lin_0[:, :, 0, 0] = self.omega[:, :, 0] - 0.5*1j*self.gamma[:, :, 0]
+        # self.h_lin_0[:, :, 1, 1] = self.omega[:, :, 1] - 0.5*1j*self.gamma[:, :, 1]
+        # self.h_lin_0[:, :, 0, 1] = self.rabi
+        # self.h_lin_0[:, :, 1, 0] = self.rabi
         
-        self.propagator = np.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype=np.complex64)
-        build_propagator(self.propagator, self.h_lin_0, self.nmax_1, self.nmax_2, self.dt)
-        self.propagator = cp.asarray(self.propagator)
+        # self.propagator = np.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype=np.complex64)
+        # build_propagator(self.propagator, self.h_lin_0, self.nmax_1, self.nmax_2, self.dt)
+        # self.propagator = cp.asarray(self.propagator)
         
-        #Build diagonalised propagator 
+        #Build diagonalised h_lin_0 
         
-        # self.h_lin_0_diag = cp.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype = np.complex64) 
-        # self.h_lin_0_diag[:, :, 0, 0] = 0.5*(self.omega[:, :, 0] + self.omega[:, :, 1] - 0.5*1j* (self.gamma[:, :, 0] + self.gamma[:, :, 1]) + cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2))
-        # self.h_lin_0_diag[:, :, 1, 1] = 0.5*(self.omega[:, :, 0] + self.omega[:, :, 1] - 0.5*1j* (self.gamma[:, :, 0] + self.gamma[:, :, 1]) - cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2))
-        # self.propagator_diag = cp.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype=np.complex64)
+        self.h_lin_0_diag = cp.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype = cp.complex64) 
+        self.h_lin_0_diag[:, :, 0, 0] = 0.5*(self.omega[:, :, 0] + self.omega[:, :, 1] - 0.5*1j* (self.gamma[:, :, 0] + self.gamma[:, :, 1]) + cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2))
+        self.h_lin_0_diag[:, :, 1, 1] = 0.5*(self.omega[:, :, 0] + self.omega[:, :, 1] - 0.5*1j* (self.gamma[:, :, 0] + self.gamma[:, :, 1]) - cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2))
         
-        # i think we do not need to build a function for this(?) -> build_propagator_diag(self.propagator, self.h_lin_0, self.nmax_1, self.nmax_2, self.dt)
-     
-        # propagator_diag[:,:,0,0] = cp.exp(-1j*h_lin_0_diag[:,:,0,0]*dt)
-        # propagator_diag[:,:,1,1] = cp.exp(-1j*h_lin_0_diag[:,:,1,1]*dt)
-        # self.propagator_diag = cp.asarray(self.propagator_diag)
         
-        # change of basis function
-        # self.pol_basis_vector_kspace = cp.zeros((2, 2, self.nmax_1, self.nmax_2), dtype=np.complex64)    #pol_basis_vector_kspace[0,:,:,:] = |+> and pol_basis_vector_kspace[1,:,:,:] = |-> in each point of k-space
-        # self.pol_basis_vector_kspace[0, 0,:,:] = -self.rabi/(0.5*(self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1) - cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2)))
-        # self.pol_basis_vector_kspace[0, 1,:,:] = 1
-        # self.pol_basis_vector_kspace[1, 0,:,:] = -self.rabi/(0.5*(self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1) + cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2)))
-        # self.pol_basis_vector_kspace[1, 1,:,:] = 1
-        # self.pol_basis_vector_kspace[0,:,:,:] = self.pol_basis_vector_kspace[0,:,:,:] / cp.linalg.norm(self.pol_basis_vector_kspace[0,:,:,:], axis=0, keepdims=True)
-        # self.pol_basis_vector_kspace[1,:,:,:] = self.pol_basis_vector_kspace[1,:,:,:] / cp.linalg.norm(self.pol_basis_vector_kspace[1,:,:,:], axis=0, keepdims=True)
+        # Build diagonal propagator
+        self.propagator_diag = cp.zeros((self.nmax_2, self.nmax_1, 2, 2), dtype=cp.complex64)
+        self.propagator_diag[:,:,0,0] = cp.exp(-1j*self.h_lin_0_diag[:,:,0,0]*self.dt)
+        self.propagator_diag[:,:,1,1] = cp.exp(-1j*self.h_lin_0_diag[:,:,1,1]*self.dt)
+        self.propagator_diag = cp.asarray(self.propagator_diag)
+        
+        # Change of basis matrix
+        
+        self.pol_basis_vector_kspace = cp.zeros((2, 2, self.nmax_1, self.nmax_2), dtype=np.complex64)    #pol_basis_vector_kspace[0,:,:,:] = |+> and pol_basis_vector_kspace[1,:,:,:] = |-> in each point of k-space
+        self.pol_basis_vector_kspace[0, 0,:,:] = -self.rabi/(0.5*(self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]) - cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2)))
+        self.pol_basis_vector_kspace[0, 1,:,:] = 1
+        self.pol_basis_vector_kspace[1, 0,:,:] = -self.rabi/(0.5*(self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]) + cp.sqrt((self.omega[:, :, 0] - self.omega[:, :, 1] - 0.5*1j*(self.gamma[:, :, 0] - self.gamma[:, :, 1]))**2 + 4*self.rabi**2)))
+        self.pol_basis_vector_kspace[1, 1,:,:] = 1
+        self.pol_basis_vector_kspace[0,:,:,:] = self.pol_basis_vector_kspace[0,:,:,:] / cp.linalg.norm(self.pol_basis_vector_kspace[0,:,:,:], axis=0, keepdims=True)
+        self.pol_basis_vector_kspace[1,:,:,:] = self.pol_basis_vector_kspace[1,:,:,:] / cp.linalg.norm(self.pol_basis_vector_kspace[1,:,:,:], axis=0, keepdims=True)
         
         
         
@@ -325,15 +323,16 @@ class ggpe():
         plan_fft.fft(phi1, phi1, cp.cuda.cufft.CUFFT_FORWARD)
         plan_fft.fft(phi2, phi2, cp.cuda.cufft.CUFFT_FORWARD)
         
-        cp.multiply(phi1, self.propagator[:, :, 0, 0], phi1)
-        phi1 += cp.multiply(phi2, self.propagator[:, :, 0, 1])
-        cp.multiply(phi2, self.propagator[:, :, 1, 1], phi2)
-        phi2 += cp.multiply(phi1, self.propagator[:, :, 1, 0])
+        # cp.multiply(phi1, self.propagator[:, :, 0, 0], phi1)
+        # phi1 += cp.multiply(phi2, self.propagator[:, :, 0, 1])
+        # cp.multiply(phi2, self.propagator[:, :, 1, 1], phi2)
+        # phi2 += cp.multiply(phi1, self.propagator[:, :, 1, 0])
         
-        # linear_step(phi1, phi2, self.propagator_diag, self.pol_basis_vector_kspace)
+        linear_step(phi1, phi2, self.propagator_diag, self.pol_basis_vector_kspace)
         
         plan_fft.fft(phi1, phi1, cp.cuda.cufft.CUFFT_INVERSE)
         plan_fft.fft(phi2, phi2, cp.cuda.cufft.CUFFT_INVERSE)
+        
         phi1 /= np.prod(phi1.shape)
         phi2 /= np.prod(phi2.shape)
         
