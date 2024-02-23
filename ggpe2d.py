@@ -49,6 +49,20 @@ def probe_excitation(phi2: cp.ndarray, F_probe_t: cp.ndarray, dt: float) -> None
         dt (float): Propagation step in ps
     """
     phi2 -= F_probe_t*dt*1j
+    
+    
+#def a general excitation using total field array instead of pump and probe separately
+# @cp.fuse(kernel_name="probe_excitation")
+# def laser_excitation(phi2: cp.ndarray, F_laser_t: cp.ndarray, dt: float) -> None:
+#     """A fused kernel to apply probe excitation term
+
+#     Args:
+#         phi (cp.ndarray): The field in ph,exc basis
+#         F_probe_t (float): Probe field
+#         dt (float): Propagation step in ps
+#     """
+#     phi2 -= F_laser_t*dt*1j
+
 
 @cp.fuse(kernel_name="single_particle_pot")
 def single_particle_pot(phi2: cp.ndarray, dt: float, v_gamma: float) -> None:
@@ -154,20 +168,9 @@ class ggpe():
         #-------oscar's field-----------
         
         # self.F_laser = cp.ones((self.t_max//self.dt + 1, nmax_1, nmax_2), dtype=cp.complex64)
-        # self.F_probe = cp.ones((self.t_max//self.dt + 1, nmax_1, nmax_2), dtype=cp.complex64)
+        # self.F_probe = cp.zeros((self.t_max//self.dt + 1, nmax_1, nmax_2), dtype=cp.complex64)
         
         #self.F_laser_t = build_field(self.F_laser, self.F_probe, name="to_turning_point", t_up=400, t_down=400)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         
 
@@ -303,8 +306,9 @@ class ggpe():
         
         
     # WORK IN PROGRESS
+    
     #%%    
-    # def build_field(self, pump_type: str = "tophat", probe_type: str = "ring", t_up: int = 400, t_down: int = 400, F: float = 1, radius: float = 75, m_probe: float = 0, p_probe: float = 0, delta_radius: float = 0, waist: float = 75, inner_waist: float = 22, C: float = 15, kx: float=1) -> (cp.ndarray):
+    # def build_field(self, pump_type: str = "tophat", probe_type: str = "ring", t_up: int = 400, t_down: int = 400, F_pump: float = 1, F_probe: float = 1, radius: float = 75, m_probe: float = 0, p_probe: float = 0, delta_radius: float = 0, waist: float = 75, inner_waist: float = 22, C: float = 15, kx: float=1) -> (cp.ndarray):
     #     """Builds the field in time
 
     #     Args:
@@ -313,6 +317,7 @@ class ggpe():
     #         name (str): Name of the temporal shape for the pump field
     #         t_up (int): 
     #         t_down (int): 
+    #         .....................
 
     #     Returns:
     #         cp.ndarray: The field at every time and position [t,x,y]
@@ -321,9 +326,9 @@ class ggpe():
     #     #spatial profile
     #     #pump
     #     if pump_type == "tophat":
-    #         self.tophat(F,radius)
+    #         self.tophat(F_pump,radius)
     #     if pump_type == "gaussian":
-    #         self.gaussian(F,radius)
+    #         self.gaussian(F_pump,radius)
     #     if pump_type == "vortex_beam":
     #         self.vortex_beam(waist, inner_waist, C)
     #     if pump_type == "shear_layer":
@@ -333,7 +338,7 @@ class ggpe():
         
     #     #probe
     #     if probe_type == "ring":
-    #         self.ring(F, radius, delta_radius)
+    #         self.ring(F_probe, radius, delta_radius)
     #     if probe_type == "radial_expo":
     #         self.radial_expo(m_probe, p_probe)
         
@@ -353,10 +358,14 @@ class ggpe():
     #             if k*self.dt<t_up:
     #                 self.F_laser[k,:,:] = self.F_laser[k,:,:]*cp.exp(((k*self.dt-t_up)/(t_up/2))**2)
         
-    #     #probe
+    #     #probe TO CHECK AGAIN
         
     #     for k in range(len(self.F_probe)):
-    #         if k*self.dt<
+    #         if k*self.dt>=self.t_probe:
+    #             self.F_probe[k,:,:] = self.F_probe[k,:,:]+cp.exp(-1j*self.omega_probe*k*self.dt)   #ADD PROBE INTENSITY? F*exp(blablabla?)
+        
+    #     self.F_laser[k,:,:] = self.F_laser[k,:,:]+self.F_probe[k,:,:]
+                
     #%%  
         
         
@@ -371,6 +380,9 @@ class ggpe():
         resonant_excitation(phi2, self.F_laser_t, self.dt)
         if k*self.dt>self.t_probe:
            probe_excitation(phi2, self.F_probe_t, self.dt)
+        # define a general photonic field excitation with the total field array instead of pump and probe separately
+        #laser_excitation(phi2, self.F_laser_t[k,:,:], self.dt)
+           
         single_particle_pot(phi2, self.dt, self.v_gamma)
         non_linearity(phi1, self.dt, self.g0)
 

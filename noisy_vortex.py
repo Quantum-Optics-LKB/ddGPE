@@ -413,6 +413,9 @@ simu.tophat(F, pump_radius)
 
 
 
+#simu.build_field(pump_type="tophat", F = F, radius = pump_radius)
+
+
 
 folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/first_runs"
 #string_name = "_noise=%s_dx%s_dt=%s"%(str(round(noise,5)),str(round(long_1/nmax_1,5)),str(round(dt_frame,5)))
