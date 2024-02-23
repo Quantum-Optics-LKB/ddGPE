@@ -302,59 +302,62 @@ class ggpe():
         
         
         
-    def build_field(self, pump_type: str = "tophat", probe_type: str = "ring", t_up: int = 400, t_down: int = 400, F: float = 1, radius: float = 75, m_probe: float = 0, p_probe: float = 0, delta_radius: float = 0, waist: float = 75, inner_waist: float = 22, C: float = 15, kx: float=1) -> (cp.ndarray):
-        """Builds the field in time
+    # WORK IN PROGRESS
+    #%%    
+    # def build_field(self, pump_type: str = "tophat", probe_type: str = "ring", t_up: int = 400, t_down: int = 400, F: float = 1, radius: float = 75, m_probe: float = 0, p_probe: float = 0, delta_radius: float = 0, waist: float = 75, inner_waist: float = 22, C: float = 15, kx: float=1) -> (cp.ndarray):
+    #     """Builds the field in time
 
-        Args:
-            F_laser (cp.ndarray): The pump laser field [t,x,y]
-            F_probe (cp.ndarray): The probe field [t,x,y]
-            name (str): Name of the temporal shape for the pump field
-            t_up (int): 
-            t_down (int): 
+    #     Args:
+    #         F_laser (cp.ndarray): The pump laser field [t,x,y]
+    #         F_probe (cp.ndarray): The probe field [t,x,y]
+    #         name (str): Name of the temporal shape for the pump field
+    #         t_up (int): 
+    #         t_down (int): 
 
-        Returns:
-            cp.ndarray: The field at every time and position [t,x,y]
-        """
+    #     Returns:
+    #         cp.ndarray: The field at every time and position [t,x,y]
+    #     """
         
-        #spatial profile
-        if pump_type == "tophat":
-            self.tophat(F,radius)
-        if pump_type == "gaussian":
-            self.gaussian(F,radius)
-        if pump_type == "vortex_beam":
-            self.vortex_beam(waist, inner_waist, C)
-        if pump_type == "shear_layer":
-            self.shear_layer(kx)
-        if pump_type == "plane_wave":
-            self.plane_wave(kx)
+    #     #spatial profile
+    #     #pump
+    #     if pump_type == "tophat":
+    #         self.tophat(F,radius)
+    #     if pump_type == "gaussian":
+    #         self.gaussian(F,radius)
+    #     if pump_type == "vortex_beam":
+    #         self.vortex_beam(waist, inner_waist, C)
+    #     if pump_type == "shear_layer":
+    #         self.shear_layer(kx)
+    #     if pump_type == "plane_wave":
+    #         self.plane_wave(kx)
         
-        if probe_type == "ring":
-            self.ring(F, radius, delta_radius)
-        if probe_type == "radial_expo":
-            self.radial_expo(m_probe, p_probe)
+    #     #probe
+    #     if probe_type == "ring":
+    #         self.ring(F, radius, delta_radius)
+    #     if probe_type == "radial_expo":
+    #         self.radial_expo(m_probe, p_probe)
         
-        #temporal profile
-        if self.tempo_type == "to_turning_pt":
-            for k in range(len(self.F_laser)):
-                if k*self.dt<t_up:
-                    self.F_laser[k,:,:] = self.F_laser[k,:,:]*3*cp.exp(-((k*self.dt-t_up)/(t_up/2))**2)
-                else:
-                    self.F_laser[k,:,:] = self.F_laser[k,:,:] + 2*cp.exp(-((self.dt-t_up)/t_down)**2)
-        if self.tempo_type == "bistab_cycle":
-            for k in range(len(self.F_laser)):
-                self.F_laser[k,:,:] = self.F_laser[k,:,:]*4*cp.exp(-((k*self.dt-self.t_max//2)/(self.t_max//4))**2)
-        if self.tempo_type == "turn_on_pump":
-            for k in range(len(self.F_laser)):
-                if k*self.dt<t_up:
-                    self.F_laser[k,:,:] = self.F_laser[k,:,:]*cp.exp(((k*self.dt-t_up)/(t_up/2))**2)
+    #     #temporal profile
+    #     #pump
+    #     if self.tempo_type == "to_turning_pt":
+    #         for k in range(len(self.F_laser)):
+    #             if k*self.dt<t_up:
+    #                 self.F_laser[k,:,:] = self.F_laser[k,:,:]*3*cp.exp(-((k*self.dt-t_up)/(t_up/2))**2)
+    #             else:
+    #                 self.F_laser[k,:,:] = self.F_laser[k,:,:] + 2*cp.exp(-((self.dt-t_up)/t_down)**2)
+    #     if self.tempo_type == "bistab_cycle":
+    #         for k in range(len(self.F_laser)):
+    #             self.F_laser[k,:,:] = self.F_laser[k,:,:]*4*cp.exp(-((k*self.dt-self.t_max//2)/(self.t_max//4))**2)
+    #     if self.tempo_type == "turn_on_pump":
+    #         for k in range(len(self.F_laser)):
+    #             if k*self.dt<t_up:
+    #                 self.F_laser[k,:,:] = self.F_laser[k,:,:]*cp.exp(((k*self.dt-t_up)/(t_up/2))**2)
         
+    #     #probe
         
-        
-        
-        
-        
-        
-        
+    #     for k in range(len(self.F_probe)):
+    #         if k*self.dt<
+    #%%  
         
         
 
