@@ -25,20 +25,148 @@ matplotlib.rcParams['axes.labelsize'] = 18
 matplotlib.rcParams['axes.titlesize'] = 20
 matplotlib.rc('xtick', labelsize=18) 
 matplotlib.rc('ytick', labelsize=18)
-matplotlib.rc('legend', fontsize = 16) 
+matplotlib.rc('legend', fontsize = 16)
 #%%
 def save_data_giant_vortex(folder):
 
-    mean_cav_x_y_t = cp.asnumpy(simu.mean_cav_x_y_t)
-    mean_exc_x_y_t = cp.asnumpy(simu.mean_exc_x_y_t)
+    # mean_cav_x_y_t = cp.asnumpy(simu.mean_cav_x_y_t)
+    # mean_exc_x_y_t = cp.asnumpy(simu.mean_exc_x_y_t)
+    # F_t = cp.asnumpy(simu.F_t)
+    
+    # mean_cav_t_x_y = np.einsum('xyt->txy', mean_cav_x_y_t)
+    # mean_exc_t_x_y = np.einsum('xyt->txy', mean_exc_x_y_t)
+    
+    mean_cav_t_x_y = cp.asnumpy(simu.mean_cav_t_x_y)
+    mean_exc_t_x_y = cp.asnumpy(simu.mean_exc_t_x_y)
     F_t = cp.asnumpy(simu.F_t)
     
-    mean_cav_t_x_y = np.einsum('xyt->txy', mean_cav_x_y_t)
-    mean_exc_t_x_y = np.einsum('xyt->txy', mean_exc_x_y_t)
-
-    mean_exc = mean_exc_t_x_y[:, :, :]
-    mean_cav = mean_cav_t_x_y[:, :, :]
+    #----------------oscar's observables----------------
     
+    # real space density avg
+    
+    # density_cav = np.zeros((len(mean_cav_t_x_y),len(mean_cav_t_x_y[0]),len(mean_cav_t_x_y[0][0])), dtype = np.complex64)
+    # density_exc = np.zeros((len(mean_cav_t_x_y),len(mean_cav_t_x_y[0]),len(mean_cav_t_x_y[0][0])), dtype = np.complex64)
+    
+    # density_cav[:,:,:]=np.abs(mean_cav_t_x_y[:,:,:])**2
+    # density_exc[:,:,:]=np.abs(mean_exc_t_x_y[:,:,:])**2
+    
+    # avg_dens_cav_t = np.zeros(len(mean_cav_t_x_y), dtype=np.complex64)
+    # avg_dens_exc_t = np.zeros(len(mean_exc_t_x_y), dtype=np.complex64)
+    
+    # avg_dens_cav_t[:] = np.average(density_cav, axis=(1,2))
+    # avg_dens_exc_t[:] = np.average(density_exc, axis=(1,2))
+    
+    # LP_rspace=np.zeros((len(mean_cav_t_x_y),len(mean_cav_t_x_y[0]),len(mean_cav_t_x_y[0][0])), dtype = np.complex64)
+    # UP_rspace=np.zeros((len(mean_cav_t_x_y),len(mean_cav_t_x_y[0]),len(mean_cav_t_x_y[0][0])), dtype = np.complex64)
+    
+    # for i in range(len(mean_cav_t_x_y)):
+        
+    #     # # Carlon Zambon's convention
+    #     # LP_rspace[i,:,:] = np.sqrt(X02)*mean_exc_t_x_y[i,:,:] + np.sqrt(C02)*mean_cav_t_x_y[i,:,:]
+    #     # UP_rspace[i,:,:] = np.sqrt(C02)*mean_exc_t_x_y[i,:,:] - np.sqrt(X02)*mean_cav_t_x_y[i,:,:]
+        
+    #     # Kilian's code convention
+    #     LP_rspace[i,:,:] = np.sqrt(X02)*mean_exc_t_x_y[i,:,:] - np.sqrt(C02)*mean_cav_t_x_y[i,:,:]
+    #     UP_rspace[i,:,:] = np.sqrt(C02)*mean_exc_t_x_y[i,:,:] + np.sqrt(X02)*mean_cav_t_x_y[i,:,:]
+    
+    # avg_dens_LP_rspace_t = np.zeros(len(mean_cav_t_x_y), dtype=np.complex64)
+    # avg_dens_UP_rspace_t = np.zeros(len(mean_cav_t_x_y), dtype=np.complex64)
+    
+    # avg_dens_LP_rspace_t[:] = np.average(np.abs(LP_rspace)**2, axis=(1,2))
+    # avg_dens_UP_rspace_t[:] = np.average(np.abs(UP_rspace)**2, axis=(1,2))
+        
+    # plt.figure()
+    # plt.plot(avg_dens_LP_rspace_t, label ='LP')
+    # plt.plot(avg_dens_UP_rspace_t, label ='UP')
+    # plt.plot(avg_dens_cav_t, label ='cav')
+    # plt.plot(avg_dens_exc_t, label ='exc')
+    # plt.xlabel("time")
+    # plt.ylabel("avg_density")
+    # plt.legend()
+    # plt.savefig(folder+"/avg_densities_rspace_t_Kconv.png")
+    # plt.close("all")
+    
+    
+    # kspace density avg
+    
+    # density_cav_kspace = np.zeros((len(mean_cav_t_x_y),len(mean_cav_t_x_y[0]),len(mean_cav_t_x_y[0][0])), dtype = np.complex64)
+    # density_exc_kspace = np.zeros((len(mean_cav_t_x_y),len(mean_cav_t_x_y[0]),len(mean_cav_t_x_y[0][0])), dtype = np.complex64)
+    
+    # for i in range(len(mean_cav_t_x_y)):
+    #     density_cav_kspace[i] = np.fft.fft2(mean_cav_t_x_y[i])
+    #     density_exc_kspace[i] = np.fft.fft2(mean_exc_t_x_y[i])
+    
+    # Ck=np.sqrt(simu.C2)
+    # Xk=np.sqrt(1-simu.C2)
+    
+    # LP_kspace=np.zeros((len(mean_cav_t_x_y),len(mean_cav_t_x_y[0]),len(mean_cav_t_x_y[0][0])), dtype = np.complex64)
+    # UP_kspace=np.zeros((len(mean_cav_t_x_y),len(mean_cav_t_x_y[0]),len(mean_cav_t_x_y[0][0])), dtype = np.complex64)
+    
+    # for i in range(len(mean_cav_t_x_y)):
+        
+    #     # # Carlon Zambon's convention
+    #     # LP_kspace[i,:,:] = Xk[:,:]*density_exc_kspace[i,:,:] + Ck[:,:]*density_cav_kspace[i,:,:]
+    #     # UP_kspace[i,:,:] = Ck[:,:]*density_exc_kspace[i,:,:] - Xk[:,:]*density_cav_kspace[i,:,:]
+        
+    #     # Kilian's code convention
+    #     LP_kspace[i,:,:] = Xk[:,:]*density_exc_kspace[i,:,:] - Ck[:,:]*density_cav_kspace[i,:,:]
+    #     UP_kspace[i,:,:] = Ck[:,:]*density_exc_kspace[i,:,:] + Xk[:,:]*density_cav_kspace[i,:,:]
+   
+    # avg_dens_LP_kspace_t = np.zeros(len(mean_cav_t_x_y), dtype=np.complex64)
+    # avg_dens_UP_kspace_t = np.zeros(len(mean_cav_t_x_y), dtype=np.complex64)
+    
+    # avg_dens_LP_kspace_t[:] = np.average(np.abs(LP_kspace)**2, axis=(1,2))
+    # avg_dens_UP_kspace_t[:] = np.average(np.abs(UP_kspace)**2, axis=(1,2))
+    
+    # plt.figure()
+    # plt.plot(avg_dens_LP_kspace_t, label ='LP_k')
+    # plt.plot(avg_dens_UP_kspace_t, label ='UP_k')
+    # #plt.plot(avg_dens_cav_t, label ='cav')
+    # #plt.plot(avg_dens_exc_t, label ='exc')
+    # plt.xlabel("time")
+    # plt.ylabel("avg_density")
+    # plt.legend()
+    # plt.savefig(folder+"/avg_densities_kspace_t.png")
+    # plt.close("all")
+    
+    
+    #Checking diagonalization
+    
+    # h0 = cp.asarray(simu.h_lin_0)
+    # h0_diag = cp.zeros((2, 2, nmax_1, nmax_2), dtype=np.complex64)
+    # h0_diag[0, 0, :, :] = cp.multiply(h0[0,0,:,:], simu.X2[:,:])+cp.multiply(h0[1,1,:,:], simu.C2[:,:])-2*cp.multiply(cp.sqrt(simu.X2[:,:]), cp.sqrt(simu.C2[:,:]))*h0[0,1,:,:]
+    # h0_diag[1, 1, :, :] = cp.multiply(h0[0,0,:,:], simu.C2[:,:])+cp.multiply(h0[1,1,:,:], simu.X2[:,:])+2*cp.multiply(cp.sqrt(simu.X2[:,:]), cp.sqrt(simu.C2[:,:]))*h0[0,1,:,:]
+    # h0_diag[0, 1, :, :] = cp.multiply(cp.sqrt(simu.X2[:,:]), cp.sqrt(simu.C2[:,:]))*h0[0,0,:,:]-cp.multiply(cp.sqrt(simu.X2[:,:]), cp.sqrt(simu.C2[:,:]))*h0[1,1,:,:]+h0[0,1,:,:]*(simu.X2-simu.C2)
+    # h0_diag[1, 0, :, :] = cp.multiply(cp.sqrt(simu.X2[:,:]), cp.sqrt(simu.C2[:,:]))*h0[0,0,:,:]-cp.multiply(cp.sqrt(simu.X2[:,:]), cp.sqrt(simu.C2[:,:]))*h0[1,1,:,:]+h0[0,1,:,:]*(simu.X2-simu.C2)
+
+    # print('BASIS CHANGE MATRIX')
+    # print(simu.pol_basis_vector_kspace[:,:,0,0])
+    # print(simu.pol_basis_vector_kspace[:,:,1,1])
+    # print(simu.pol_basis_vector_kspace[:,:,100,100])
+    # print(simu.pol_basis_vector_kspace[:,:,128,128])
+
+    # print("h0")
+    # print(h0[:,:,0,0])
+    # print(h0[:,:,1,1])
+    # print(h0[:,:,100,100])
+    # print(h0[:,:,128,128])
+    
+    # print("h0_diag is ")
+    # print(h0_diag[:,:,0,0])
+    # print(h0_diag[:,:,1,1])
+    # print(h0_diag[:,:,100,100])
+    # print(h0_diag[:,:,128,128])
+
+    #---------------------------------------------------------------------------
+    
+    
+    # mean_cav_t_x_y = np.einsum('xyt->txy', mean_cav_x_y_t)
+    # mean_exc_t_x_y = np.einsum('xyt->txy', mean_exc_x_y_t)
+
+    # mean_exc = mean_exc_t_x_y[:, :, :]
+    # mean_cav = mean_cav_t_x_y[:, :, :]
+    
+    #pol = mean_cav_t_x_y * np.sqrt(C02) - mean_exc_t_x_y * np.sqrt(X02)            #correct below?
     pol = mean_cav_t_x_y * np.sqrt(C02) - mean_exc_t_x_y * np.sqrt(X02)
     
     # pol_bog = pol[:-5,:,:] - pol[0,:,:]
@@ -268,8 +396,6 @@ omega_probe=0
 
 tempo_type = "to_turning_pt"
 
-
-
 simu = ggpe(nmax_1, nmax_2, long_1, long_2, tempo_type, t_max, t_stationary, t_obs, t_probe, t_noise, dt_frame, gamma_exc, 
         gamma_ph, noise, g0, detuning, omega_probe, omega_exc, omega_cav, rabi, k_z)
 
@@ -309,5 +435,3 @@ except:
     
 simu.evolution()
 save_data_giant_vortex(folder_DATA)
-
-
