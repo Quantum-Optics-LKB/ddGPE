@@ -99,8 +99,8 @@ def linear_step(phi1: cp.ndarray, phi2: cp.ndarray, phi_up: cp.ndarray, phi_lp: 
     phi1 += cp.multiply(phi_up, hopfield_coefs[1,:,:])
     cp.multiply(phi_lp, hopfield_coefs[1,:,:], phi2) 
     phi2 += cp.multiply(phi_up, hopfield_coefs[0,:,:])
-
-
+           
+            
 
 class ggpe():
 
@@ -143,6 +143,33 @@ class ggpe():
 
         self.F_laser = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
         self.F_probe = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
+        
+    
+        #Max energy in the system to define dt
+        #omega_max = max(omega_cav*(np.sqrt(1e0 + (k_1[0]**2+k_2[0]**2)/k_z**2)) - omega_turning_field, omega_exc - omega_turning_field)
+        omega_max = 32 #[meV]
+        cst = 4 #increase cst if you see fluctuations
+        self.dt = 1/(omega_max*cst)
+        
+        #-------oscar's field-----------
+        
+        # self.F_laser = cp.ones((self.t_max//self.dt + 1, nmax_1, nmax_2), dtype=cp.complex64)
+        # self.F_probe = cp.ones((self.t_max//self.dt + 1, nmax_1, nmax_2), dtype=cp.complex64)
+        
+        #self.F_laser_t = build_field(self.F_laser, self.F_probe, name="to_turning_point", t_up=400, t_down=400)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
         self.phi = cp.zeros((2, self.nmax_1, self.nmax_2), dtype = cp.complex64) #self.phi[0, :, :] = self.phi1=excitons and self.phi[1, :, :] = self.phi2=photons
         self.phi_pol = cp.zeros((2, self.nmax_1, self.nmax_2), dtype = cp.complex64)
@@ -180,11 +207,11 @@ class ggpe():
         self.omega=cp.asarray(self.omega)
         self.gamma=cp.asarray(self.gamma)
 
-        #Max energy in the system to define dt
-        #omega_max = max(omega_cav*(np.sqrt(1e0 + (k_1[0]**2+k_2[0]**2)/k_z**2)) - omega_turning_field, omega_exc - omega_turning_field)
-        omega_max = 32 #[meV]
-        cst = 4 #increase cst if you see fluctuations
-        self.dt = 1/(omega_max*cst)
+        # #Max energy in the system to define dt
+        # #omega_max = max(omega_cav*(np.sqrt(1e0 + (k_1[0]**2+k_2[0]**2)/k_z**2)) - omega_turning_field, omega_exc - omega_turning_field)
+        # omega_max = 32 #[meV]
+        # cst = 4 #increase cst if you see fluctuations
+        # self.dt = 1/(omega_max*cst)
         
         
 
@@ -215,12 +242,13 @@ class ggpe():
         self.v_gamma = gamma_boarder*(A+B)/(A*B+1)
 
     def tophat(self, F, radius=75):
+        self.F_laser[self.R > radius] = 0
         self.F_laser = self.F_laser * F
-        self.F_laser[self.R**2 > radius**2] = 0
+        #self.F_laser[self.R**2 > radius**2] = 0
         self.pumptype = "tophat"
 
     def gaussian(self, F, radius=75):
-        self.F_laser = self.F_laser * F * cp.exp(-self.R**2/radius**2)
+        self.F_laser = self.F_laser * F * cp.exp(-self.R**2/radius**2) #O: identifying with Gaussian distribution, radius is sqrt(2)*std_deviation
         self.pumptype = "gaussian"
 
     def ring(self, F_probe, radius, delta_radius):
@@ -271,6 +299,64 @@ class ggpe():
             return self.bistab_cycle(t)
         if self.tempo_type == "turn_on_pump":
             return self.turn_on_pump(t, t_up)
+        
+        
+        
+    def build_field(self, pump_type: str = "tophat", probe_type: str = "ring", t_up: int = 400, t_down: int = 400, F: float = 1, radius: float = 75, m_probe: float = 0, p_probe: float = 0, delta_radius: float = 0, waist: float = 75, inner_waist: float = 22, C: float = 15, kx: float=1) -> (cp.ndarray):
+        """Builds the field in time
+
+        Args:
+            F_laser (cp.ndarray): The pump laser field [t,x,y]
+            F_probe (cp.ndarray): The probe field [t,x,y]
+            name (str): Name of the temporal shape for the pump field
+            t_up (int): 
+            t_down (int): 
+
+        Returns:
+            cp.ndarray: The field at every time and position [t,x,y]
+        """
+        
+        #spatial profile
+        if pump_type == "tophat":
+            self.tophat(F,radius)
+        if pump_type == "gaussian":
+            self.gaussian(F,radius)
+        if pump_type == "vortex_beam":
+            self.vortex_beam(waist, inner_waist, C)
+        if pump_type == "shear_layer":
+            self.shear_layer(kx)
+        if pump_type == "plane_wave":
+            self.plane_wave(kx)
+        
+        if probe_type == "ring":
+            self.ring(F, radius, delta_radius)
+        if probe_type == "radial_expo":
+            self.radial_expo(m_probe, p_probe)
+        
+        #temporal profile
+        if self.tempo_type == "to_turning_pt":
+            for k in range(len(self.F_laser)):
+                if k*self.dt<t_up:
+                    self.F_laser[k,:,:] = self.F_laser[k,:,:]*3*cp.exp(-((k*self.dt-t_up)/(t_up/2))**2)
+                else:
+                    self.F_laser[k,:,:] = self.F_laser[k,:,:] + 2*cp.exp(-((self.dt-t_up)/t_down)**2)
+        if self.tempo_type == "bistab_cycle":
+            for k in range(len(self.F_laser)):
+                self.F_laser[k,:,:] = self.F_laser[k,:,:]*4*cp.exp(-((k*self.dt-self.t_max//2)/(self.t_max//4))**2)
+        if self.tempo_type == "turn_on_pump":
+            for k in range(len(self.F_laser)):
+                if k*self.dt<t_up:
+                    self.F_laser[k,:,:] = self.F_laser[k,:,:]*cp.exp(((k*self.dt-t_up)/(t_up/2))**2)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
     def split_step(self, plan_fft, k: int) -> None:
         phi1 = self.phi[0, :, :]
@@ -307,6 +393,7 @@ class ggpe():
         phi1 = self.phi[0,:,:]
         phi2 = self.phi[1,:,:]
         stationary = 0
+        
         if save:
             self.mean_cav_t_x_y = cp.zeros((self.n_frame, self.nmax_1, self.nmax_2), dtype = np.complex64)
             self.mean_exc_t_x_y = cp.zeros((self.n_frame, self.nmax_1, self.nmax_2), dtype = np.complex64)
@@ -315,7 +402,9 @@ class ggpe():
             self.F_t = cp.zeros(self.n_frame, dtype = np.float32)
             r_t = 0
             i_frame = 0
+            
         plan_fft = build_fft_plan(cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64))
+        
         for k in tqdm(range(int(self.t_max//self.dt))):
             self.F_probe_t = self.F_probe * self.tempo_probe(k*self.dt)
             self.F_laser_t = self.F_laser * self.temp(k*self.dt)
