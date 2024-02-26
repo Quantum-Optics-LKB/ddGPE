@@ -28,32 +28,19 @@ def non_linearity(phi1: cp.ndarray, dt: float, g0: float) -> None:
     """
     phi1 *= cp.exp(-1j*dt*g0*cp.abs(phi1)**2)
 
-@cp.fuse(kernel_name="resonant_excitation")
-def resonant_excitation(phi2: cp.ndarray, F_laser_t: cp.ndarray, dt: float) -> None:
-    """A fused kernel to apply resonant_excitation term
+# @cp.fuse(kernel_name="resonant_excitation")
+# def resonant_excitation(phi2: cp.ndarray, F_laser_t: cp.ndarray, dt: float) -> None:
+#     """A fused kernel to apply resonant_excitation term
 
-    Args:
-        phi (cp.ndarray): The field in ph,exc basis
-        F_laser_t (float): Excitation laser field
-        dt (float): Propagation step in ps
-    """
-    phi2 -= F_laser_t*dt*1j
+#     Args:
+#         phi (cp.ndarray): The field in ph,exc basis
+#         F_laser_t (float): Excitation laser field
+#         dt (float): Propagation step in ps
+#     """
+#     phi2 -= F_laser_t*dt*1j
 
-@cp.fuse(kernel_name="probe_excitation")
-def probe_excitation(phi2: cp.ndarray, F_probe_t: cp.ndarray, dt: float) -> None:
-    """A fused kernel to apply probe excitation term
-
-    Args:
-        phi (cp.ndarray): The field in ph,exc basis
-        F_probe_t (float): Probe field
-        dt (float): Propagation step in ps
-    """
-    phi2 -= F_probe_t*dt*1j
-    
-    
-#def a general excitation using total field array instead of pump and probe separately
 # @cp.fuse(kernel_name="probe_excitation")
-# def laser_excitation(phi2: cp.ndarray, F_laser_t: cp.ndarray, dt: float) -> None:
+# def probe_excitation(phi2: cp.ndarray, F_probe_t: cp.ndarray, dt: float) -> None:
 #     """A fused kernel to apply probe excitation term
 
 #     Args:
@@ -61,7 +48,21 @@ def probe_excitation(phi2: cp.ndarray, F_probe_t: cp.ndarray, dt: float) -> None
 #         F_probe_t (float): Probe field
 #         dt (float): Propagation step in ps
 #     """
-#     phi2 -= F_laser_t*dt*1j
+#     phi2 -= F_probe_t*dt*1j
+    
+    
+#def a general excitation using total field array instead of pump and probe separately
+@cp.fuse(kernel_name="probe_excitation")
+def laser_excitation(phi2: cp.ndarray, F_laser_r, F_laser_t: cp.ndarray, F_probe_r, F_probe_t, dt: float) -> None:
+    """A fused kernel to apply probe excitation term
+
+    Args:
+        phi (cp.ndarray): The field in ph,exc basis
+        F_probe_t (float): Probe field
+        dt (float): Propagation step in ps
+    """
+    phi2 -= F_laser_r*F_laser_t*dt*1j
+    phi2 -= F_probe_r*F_probe_t*dt*1j
 
 
 @cp.fuse(kernel_name="single_particle_pot")
@@ -115,6 +116,81 @@ def linear_step(phi1: cp.ndarray, phi2: cp.ndarray, phi_up: cp.ndarray, phi_lp: 
     phi2 += cp.multiply(phi_up, hopfield_coefs[0,:,:])
            
             
+def tophat_new(F_laser_r, F, R, radius=75):
+        F_laser_r[R > radius] = 0
+        F_laser_r[:,:] = F_laser_r[:,:] * F
+
+def gaussian_new(F_laser_r, F, R, radius=75):
+    F_laser_r[:,:] = F_laser_r[:,:] * F * cp.exp(-R[:,:]**2/radius**2) #O: identifying with Gaussian distribution, radius is sqrt(2)*std_deviation
+
+def vortex_beam_new(F_laser_r, R, THETA, waist=75, inner_waist=22, C=15):
+    F_laser_r[:,:] = F_laser_r[:,:] * cp.exp(1j*C*THETA[:,:])*cp.tanh(R[:,:]/inner_waist)**C
+
+def shear_layer_new(F_laser_r, X, Y, kx: float=1):
+    phase = cp.zeros(F_laser_r.shape)
+    phase = kx*X[:,:]
+    phase[Y>0]=-phase[Y>0]
+    F_laser_r[:,:] = F_laser_r[:,:]*cp.exp(1j*phase[:,:])
+
+def plane_wave_new(F_laser_r, X, kx=0.5):
+    phase = cp.zeros(X.shape)
+    phase = kx*X[:,:]
+    F_laser_r[:,:] = F_laser_r[:,:] * cp.exp(1j*phase[:,:])
+
+def ring_new(F_probe_r, F_probe, R, radius, delta_radius):
+    F_probe_r[R>radius+delta_radius/2] = 0
+    F_probe_r[R<radius-delta_radius/2] = 0
+    F_probe_r[:,:] = F_probe_r[:,:] * F_probe
+
+def radial_expo_new(F_probe_r, R, THETA, m_probe, p_probe):
+    F_probe_r[:,:] = F_probe_r[:,:] * cp.exp(1j*p_probe*R[:,:]) * cp.exp(1j*m_probe*THETA[:,:])
+
+# def tempo_probe_new(F_probe_t, omega_probe, t_probe, dt):
+#     for k in range(len(F_probe_t)):
+#         if k*dt>=t_probe:
+#             F_probe_t[k] *= cp.exp(-1j*k*dt*omega_probe)
+#         else:
+#             F_probe_t[k] = 0
+def tempo_probe_new(F_probe_t, omega_probe, t_probe, time):
+    F_probe_t[time<t_probe] = 0
+    F_probe_t[time>=t_probe] = cp.exp(-1j*(time[time>=t_probe]-t_probe)*omega_probe)
+
+
+# def to_turning_point_new(F_laser_t, dt, t_up=400, t_down=400):
+#     for k in range(len(F_laser_t)):
+#         if k*dt<t_up:
+#             F_laser_t[k] = F_laser_t[k]*3*cp.exp(-((k*dt-t_up)/(t_up/2))**2)
+#         else:
+#             F_laser_t[k] = F_laser_t[k]*(1 + 2*cp.exp(-((k*dt-t_up)/t_down)**2))
+def to_turning_point_new(F_laser_t, time, t_up=400, t_down=400):
+    F_laser_t[time<t_up] = 3*cp.exp(-((time[time<t_up]-t_up)/(t_up/2))**2)
+    F_laser_t[time>=t_up] = (1 + 2*cp.exp(-((time[time>=t_up]-t_up)/t_down)**2))
+
+# def bistab_cycle_new(F_laser_t, dt, t_max):
+#     for k in range(len(F_laser_t)):
+#         F_laser_t[k] = F_laser_t[k]*4*cp.exp(-((k*dt-t_max//2)/(t_max//4))**2)
+def bistab_cycle_new(F_laser_t, time, t_max):
+    F_laser_t[:] = 4*cp.exp(-((time[:]-t_max//2)/(t_max//4))**2)
+
+# def turn_on_pump_new(F_laser_t, dt, t_up=200):
+#     for k in range(len(F_laser_t)):
+#         if k*dt<t_up:
+#             F_laser_t[k] = cp.exp(((k*dt-t_up)/(t_up/2))**2)
+#         else:
+#             F_laser_t[k] = 1
+def turn_on_pump_new(F_laser_t, time, t_up=200):
+    F_laser_t[time<t_up] = cp.exp(((time[time<t_up]-t_up)/(t_up/2))**2)
+    F_laser_t[time>=t_up] = 1
+
+# def temp_new(t, name = "to_turning_pt", t_up=400, t_down=400) -> (cp.ndarray):
+#     if self.tempo_type == "to_turning_pt":
+#         return self.to_turning_point(t, t_up, t_down)
+#     if self.tempo_type == "bistab_cycle":
+#         return self.bistab_cycle(t)
+#     if self.tempo_type == "turn_on_pump":
+#         return self.turn_on_pump(t, t_up)
+
+
 
 class ggpe():
 
@@ -155,8 +231,8 @@ class ggpe():
         self.R = cp.hypot(self.X,self.Y)
         self.THETA = cp.angle(self.X+1j*self.Y)
 
-        self.F_laser = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
-        self.F_probe = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
+        # self.F_laser = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
+        # self.F_probe = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
         
     
         #Max energy in the system to define dt
@@ -167,10 +243,14 @@ class ggpe():
         
         #-------oscar's field-----------
         
-        # self.F_laser = cp.ones((self.t_max//self.dt + 1, nmax_1, nmax_2), dtype=cp.complex64)
-        # self.F_probe = cp.zeros((self.t_max//self.dt + 1, nmax_1, nmax_2), dtype=cp.complex64)
+        self.F_laser_r = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
+        self.F_laser_t = cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
         
-        #self.F_laser_t = build_field(self.F_laser, self.F_probe, name="to_turning_point", t_up=400, t_down=400)
+        self.F_probe_r = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
+        self.F_probe_t = cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        
+        self.time = cp.arange(0, self.t_max, self.dt)     
+       
         
         
 
@@ -244,64 +324,64 @@ class ggpe():
             self.long_1 - (cp.multiply(cp.transpose(self.x_1+self.long_1/2), id_x_2)))**2/delta_gamma_1**2))
         self.v_gamma = gamma_boarder*(A+B)/(A*B+1)
 
-    def tophat(self, F, radius=75):
-        self.F_laser[self.R > radius] = 0
-        self.F_laser = self.F_laser * F
-        #self.F_laser[self.R**2 > radius**2] = 0
-        self.pumptype = "tophat"
+    # def tophat(self, F, radius=75):
+    #     self.F_laser[self.R > radius] = 0
+    #     self.F_laser = self.F_laser * F
+    #     #self.F_laser[self.R**2 > radius**2] = 0
+    #     self.pumptype = "tophat"
 
-    def gaussian(self, F, radius=75):
-        self.F_laser = self.F_laser * F * cp.exp(-self.R**2/radius**2) #O: identifying with Gaussian distribution, radius is sqrt(2)*std_deviation
-        self.pumptype = "gaussian"
+    # def gaussian(self, F, radius=75):
+    #     self.F_laser = self.F_laser * F * cp.exp(-self.R**2/radius**2) #O: identifying with Gaussian distribution, radius is sqrt(2)*std_deviation
+    #     self.pumptype = "gaussian"
 
-    def ring(self, F_probe, radius, delta_radius):
-        self.F_probe[self.R>radius+delta_radius/2] = 0
-        self.F_probe[self.R<radius-delta_radius/2] = 0
-        self.F_probe = self.F_probe * F_probe
+    # def ring(self, F_probe, radius, delta_radius):
+    #     self.F_probe[self.R>radius+delta_radius/2] = 0
+    #     self.F_probe[self.R<radius-delta_radius/2] = 0
+    #     self.F_probe = self.F_probe * F_probe
 
-    def radial_expo(self, m_probe, p_probe):
-        self.F_probe = self.F_probe * cp.exp(1j*p_probe*self.R) * cp.exp(1j*m_probe*self.THETA)
+    # def radial_expo(self, m_probe, p_probe):
+    #     self.F_probe = self.F_probe * cp.exp(1j*p_probe*self.R) * cp.exp(1j*m_probe*self.THETA)
 
-    def tempo_probe(self, t):
-        return cp.exp(-1j*t*self.omega_probe)
+    # def tempo_probe(self, t):
+    #     return cp.exp(-1j*t*self.omega_probe)
 
-    def vortex_beam(self, waist=75, inner_waist=22, C=15):
-        self.F_laser = self.F_laser * cp.exp(1j*C*self.THETA)\
-            *cp.tanh(self.R/inner_waist)**C
+    # def vortex_beam(self, waist=75, inner_waist=22, C=15):
+    #     self.F_laser = self.F_laser * cp.exp(1j*C*self.THETA)\
+    #         *cp.tanh(self.R/inner_waist)**C
 
-    def shear_layer(self, kx: float=1):
-        phase = cp.zeros(self.X.shape)
-        phase = kx*self.X[:,:]
-        phase[self.Y>0]=-phase[self.Y>0]
-        self.F_laser = self.F_laser*cp.exp(1j*phase)
+    # def shear_layer(self, kx: float=1):
+    #     phase = cp.zeros(self.X.shape)
+    #     phase = kx*self.X[:,:]
+    #     phase[self.Y>0]=-phase[self.Y>0]
+    #     self.F_laser = self.F_laser*cp.exp(1j*phase)
 
-    def plane_wave(self, kx=0.5):
-        phase = cp.zeros(self.X.shape)
-        phase = kx*self.X[:,:]
-        self.F_laser = self.F_laser * cp.exp(1j*phase)
+    # def plane_wave(self, kx=0.5):
+    #     phase = cp.zeros(self.X.shape)
+    #     phase = kx*self.X[:,:]
+    #     self.F_laser = self.F_laser * cp.exp(1j*phase)
 
-    def to_turning_point(self, t, t_up, t_down):
-        if t<t_up:
-            return 3*cp.exp(-((t-t_up)/(t_up/2))**2)
-        else:
-            return 1 + 2*cp.exp(-((t-t_up)/t_down)**2)
+    # def to_turning_point(self, t, t_up, t_down):
+    #     if t<t_up:
+    #         return 3*cp.exp(-((t-t_up)/(t_up/2))**2)
+    #     else:
+    #         return 1 + 2*cp.exp(-((t-t_up)/t_down)**2)
 
-    def bistab_cycle(self, t):
-        return 4*cp.exp(-((t-self.t_max//2)/(self.t_max//4))**2)
+    # def bistab_cycle(self, t):
+    #     return 4*cp.exp(-((t-self.t_max//2)/(self.t_max//4))**2)
 
-    def turn_on_pump(self, t, t_up=200):
-        if t<t_up:
-            return cp.exp(((t-t_up)/(t_up/2))**2)
-        else:
-            return 1
+    # def turn_on_pump(self, t, t_up=200):
+    #     if t<t_up:
+    #         return cp.exp(((t-t_up)/(t_up/2))**2)
+    #     else:
+    #         return 1
 
-    def temp(self, t, name = "to_turning_pt", t_up=400, t_down=400) -> (cp.ndarray):
-        if self.tempo_type == "to_turning_pt":
-            return self.to_turning_point(t, t_up, t_down)
-        if self.tempo_type == "bistab_cycle":
-            return self.bistab_cycle(t)
-        if self.tempo_type == "turn_on_pump":
-            return self.turn_on_pump(t, t_up)
+    # def temp(self, t, name = "to_turning_pt", t_up=400, t_down=400) -> (cp.ndarray):
+    #     if self.tempo_type == "to_turning_pt":
+    #         return self.to_turning_point(t, t_up, t_down)
+    #     if self.tempo_type == "bistab_cycle":
+    #         return self.bistab_cycle(t)
+    #     if self.tempo_type == "turn_on_pump":
+    #         return self.turn_on_pump(t, t_up)
         
         
         
@@ -376,12 +456,12 @@ class ggpe():
         phi_lp = self.phi_pol[0, :, :]
         phi_up = self.phi_pol[1, :, :]
         
-        # #REAL_SPACE
-        resonant_excitation(phi2, self.F_laser_t, self.dt)
-        if k*self.dt>self.t_probe:
-           probe_excitation(phi2, self.F_probe_t, self.dt)
+        # # REAL_SPACE
+        # resonant_excitation(phi2, self.F_laser_t, self.dt)
+        # if k*self.dt>self.t_probe:
+        #    probe_excitation(phi2, self.F_probe_t, self.dt)
         # define a general photonic field excitation with the total field array instead of pump and probe separately
-        #laser_excitation(phi2, self.F_laser_t[k,:,:], self.dt)
+        laser_excitation(phi2, self.F_laser_r[:,:], self.F_laser_t[k], self.F_probe_r[:,:], self.F_probe_t[k], self.dt)
            
         single_particle_pot(phi2, self.dt, self.v_gamma)
         non_linearity(phi1, self.dt, self.g0)
@@ -421,8 +501,8 @@ class ggpe():
         plan_fft = build_fft_plan(cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64))
         
         for k in tqdm(range(int(self.t_max//self.dt))):
-            self.F_probe_t = self.F_probe * self.tempo_probe(k*self.dt)
-            self.F_laser_t = self.F_laser * self.temp(k*self.dt)
+            # self.F_probe_t = self.F_probe * self.tempo_probe(k*self.dt)
+            # self.F_laser_t = self.F_laser * self.temp(k*self.dt)
             self.split_step(plan_fft, k)
             if k*self.dt > self.t_stationary and stationary<1:
                 self.mean_cav_x_y_stat = phi2

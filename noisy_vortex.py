@@ -5,6 +5,15 @@ import cupy as cp
 import matplotlib.pyplot as plt
 import matplotlib
 from ggpe2d import ggpe
+from ggpe2d import tophat_new
+from ggpe2d import gaussian_new
+from ggpe2d import vortex_beam_new
+from ggpe2d import shear_layer_new
+from ggpe2d import plane_wave_new
+from ggpe2d import ring_new
+from ggpe2d import radial_expo_new
+from ggpe2d import to_turning_point_new
+from ggpe2d import tempo_probe_new
 from skimage.restoration import unwrap_phase
 import os
 import scipy
@@ -156,6 +165,74 @@ def save_data_giant_vortex(folder):
     # print(h0_diag[:,:,1,1])
     # print(h0_diag[:,:,100,100])
     # print(h0_diag[:,:,128,128])
+    
+    
+    # verifying new fields:
+    
+    # #pump
+    # F_laser_phase = cp.angle(F_laser_r)
+    # max_F = cp.amax(cp.abs(F_laser_r)**2)
+    # F_laser_norm = cp.array(F_laser_r*255/max_F,dtype = cp.uint8)
+    
+    # plt.figure(num=1)
+    # plt.pcolormesh(F_laser_norm.get())
+    # plt.savefig(folder+"/intensity_new.png")
+    
+    # plt.figure(num=2)
+    # plt.pcolormesh(F_laser_phase.get())
+    # plt.savefig(folder+"/phase_new.png")
+    
+    
+    
+    
+    # F_laser_phase_prev = cp.array(cp.angle(F_laser_prev))
+    # max_F_prev = cp.amax(cp.absolute(F_laser_prev)**2)
+    # F_laser_norm_prev = cp.array(F_laser_prev*255/max_F_prev, dtype = cp.uint8)
+    
+    # plt.figure(num=3)
+    # plt.pcolormesh(F_laser_norm_prev.get())
+    # plt.savefig(folder+"/intensity_prev.png")
+    
+    # plt.figure(num=4)
+    # plt.pcolormesh(F_laser_phase_prev.get())
+    # plt.savefig(folder+"/phase_prev.png")
+    
+    
+    # plt.close("all")
+    
+    #probe
+    # F_probe_phase = cp.angle(F_probe_r)
+    # max_F = cp.amax(cp.abs(F_probe_r)**2)
+    # F_probe_norm = cp.array(F_probe_r*255/max_F,dtype = cp.uint8)
+    
+    # plt.figure(num=1)
+    # plt.pcolormesh(F_probe_norm.get())
+    # plt.savefig(folder+"/intensity_new.png")
+    
+    # plt.figure(num=2)
+    # plt.pcolormesh(F_probe_phase.get())
+    # plt.savefig(folder+"/phase_new.png")
+    
+    
+    
+    
+    # F_probe_phase_prev = cp.array(cp.angle(F_probe_prev))
+    # max_F_prev = cp.amax(cp.absolute(F_probe_prev)**2)
+    # F_probe_norm_prev = cp.array(F_probe_prev*255/max_F_prev, dtype = cp.uint8)
+    
+    # plt.figure(num=3)
+    # plt.pcolormesh(F_probe_norm_prev.get())
+    # plt.savefig(folder+"/intensity_prev.png")
+    
+    # plt.figure(num=4)
+    # plt.pcolormesh(F_probe_phase_prev.get())
+    # plt.savefig(folder+"/phase_prev.png")
+    
+    
+    # plt.close("all")
+       
+    
+    
 
     #---------------------------------------------------------------------------
     
@@ -166,7 +243,7 @@ def save_data_giant_vortex(folder):
     # mean_exc = mean_exc_t_x_y[:, :, :]
     # mean_cav = mean_cav_t_x_y[:, :, :]
     
-    #pol = mean_cav_t_x_y * np.sqrt(C02) - mean_exc_t_x_y * np.sqrt(X02)            #correct below?
+ 
     pol = mean_cav_t_x_y * np.sqrt(C02) - mean_exc_t_x_y * np.sqrt(X02)
     
     # pol_bog = pol[:-5,:,:] - pol[0,:,:]
@@ -184,7 +261,7 @@ def save_data_giant_vortex(folder):
     # # plt.savefig(folder + "/field_inside")
     # plt.figure()
     # plt.plot(field_tot)
-    plt.savefig(folder + "/field_tot")
+    #plt.savefig(folder + "/field_tot")
     
     # for k in range(pol_bog.shape[0]):
     #     plt.figure()
@@ -210,6 +287,9 @@ def save_data_giant_vortex(folder):
     
     #pol_u = mean_cav_t_x_y * np.sqrt(X02) + mean_exc_t_x_y * np.sqrt(C02)
     
+    
+    # # # # MOVIE
+    
     size=(nmax_1, nmax_2)
     fps=15
     
@@ -224,15 +304,19 @@ def save_data_giant_vortex(folder):
     out_dens.release()
     out_phase.release()
     
+    
+    
+    
+    
     #pol_bog_gif = 255*np.abs(pol_bog)/np.amax(np.abs(pol_bog))
     #pol_gif = 255*np.abs(pol)/np.amax(np.abs(pol))
     #F_gif = 255*np.abs(pol)/np.amax(np.abs(exc))
     #mean_cav_gif = 255*np.abs(mean_cav)/np.amax(mean_cav)
     # now = datetime.now()
     # dt_string = now.strftime("%Y%m%d-%H%M%S")
-    string_name = ""
-    np.save(folder + "/pol.npy", pol)
-    np.save(folder + "/F_t.npy", F_t)
+    # # # # string_name = ""
+    # # # # np.save(folder + "/pol.npy", pol)
+    # # # # np.save(folder + "/F_t.npy", F_t)
     #create_gif(folder + "/den.gif", pol_gif)
     #create_gif(folder + "/den_bog.gif", pol_bog_gif)
     #create_gif(folder +"/mean_cav.gif", mean_cav_gif)
@@ -388,6 +472,7 @@ long_1, long_2 = 256, 256
 if (long_1/nmax)**2<g0/gamma_ph:
     print("WARNING: TWA NOT VALID")
 
+
 F = 1
 corr = 0.0 #0.35
 detuning = 0.17/h_bar
@@ -408,18 +493,48 @@ Y = simu.Y
 pump_radius = 60
 
 
+#Build laser+probe field
 
-simu.tophat(F, pump_radius)
+# F_laser_r = simu.F_laser_r
+# F_laser_t = simu.F_laser_t
+# F_probe_r = simu.F_probe_r
+# F_probe_t = simu.F_probe_t
+
+tophat_new(simu.F_laser_r, F, R, pump_radius)
+#gaussian_new(simu.F_laser_r, F, R, pump_radius)
+#vortex_beam_new(F_laser_r, R, THETA)
+#shear_layer_new(F_laser_r, X, Y, kx=1)
+#plane_wave_new(F_laser_r, X, kx=0.5)
+ring_new(simu.F_probe_r, F, R, pump_radius, delta_radius=20)
+#radial_expo_new(F_probe_r, R, THETA, m_probe=10, p_probe=5)
+to_turning_point_new(simu.F_laser_t, simu.time)
+tempo_probe_new(simu.F_probe_t, omega_probe, t_probe, simu.time)
 
 
 
-#simu.build_field(pump_type="tophat", F = F, radius = pump_radius)
+#previous method
+#simu.tophat(F, pump_radius)
+#simu.gaussian(F, pump_radius)
+#simu.vortex_beam()
+#simu.shear_layer(kx=1)
+#simu.plane_wave(kx=0.5)
+#simu.ring(F, pump_radius, delta_radius=20)
+#simu.radial_expo(m_probe=10, p_probe=5)
+
+# F_laser_prev = simu.F_laser
+# F_probe_prev = simu.F_probe
+
+
+
+
+
+
 
 
 
 folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/first_runs"
 #string_name = "_noise=%s_dx%s_dt=%s"%(str(round(noise,5)),str(round(long_1/nmax_1,5)),str(round(dt_frame,5)))
-string_name="_tophat_turning_point_basischange"
+string_name="_comparing_fields"
 #string_name = "_k=%s_detuning=%s_F=%s"%(str(round(kx,3)),str(round(detuning,3)),str(round(F,3)))
 
 try:
@@ -436,5 +551,11 @@ try:
 except:
     print("folder already created")
     
+    
+    
+    
 simu.evolution()
+
+# save_data_giant_vortex(folder_DATA, F_laser_r, F_laser_prev, F_probe_r, F_probe_prev)
 save_data_giant_vortex(folder_DATA)
+
