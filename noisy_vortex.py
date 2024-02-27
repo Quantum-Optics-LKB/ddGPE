@@ -5,15 +5,17 @@ import cupy as cp
 import matplotlib.pyplot as plt
 import matplotlib
 from ggpe2d import ggpe
-from ggpe2d import tophat_new
-from ggpe2d import gaussian_new
-from ggpe2d import vortex_beam_new
-from ggpe2d import shear_layer_new
-from ggpe2d import plane_wave_new
-from ggpe2d import ring_new
-from ggpe2d import radial_expo_new
-from ggpe2d import to_turning_point_new
-from ggpe2d import tempo_probe_new
+from ggpe2d import tophat
+from ggpe2d import gaussian
+from ggpe2d import vortex_beam
+from ggpe2d import shear_layer
+from ggpe2d import plane_wave
+from ggpe2d import ring
+from ggpe2d import radial_expo
+from ggpe2d import to_turning_point
+from ggpe2d import bistab_cycle
+from ggpe2d import turn_on_pump
+from ggpe2d import tempo_probe
 from skimage.restoration import unwrap_phase
 import os
 import scipy
@@ -36,7 +38,7 @@ matplotlib.rc('xtick', labelsize=18)
 matplotlib.rc('ytick', labelsize=18)
 matplotlib.rc('legend', fontsize = 16)
 #%%
-def save_data_giant_vortex(folder):
+def save_data_giant_vortex(folder,parameters):
 
     # mean_cav_x_y_t = cp.asnumpy(simu.mean_cav_x_y_t)
     # mean_exc_x_y_t = cp.asnumpy(simu.mean_exc_x_y_t)
@@ -169,6 +171,13 @@ def save_data_giant_vortex(folder):
     
     # verifying new fields:
     
+    
+    # F_laser_r = simu.F_laser_r
+    # F_laser_t = simu.F_laser_t
+    # F_probe_r = simu.F_probe_r
+    # F_probe_t = simu.F_probe_t
+
+
     # #pump
     # F_laser_phase = cp.angle(F_laser_r)
     # max_F = cp.amax(cp.abs(F_laser_r)**2)
@@ -429,7 +438,14 @@ def save_data_giant_vortex(folder):
     # plt.savefig(folder+"/v_cs.png")
     # plt.close("all")
     #print("coeff is "+str((field_outside[200]-field_outside[50])/field_outside[50]))
+    
+    
+    with open(folder+"/parameters.txt", "w") as f:
+        f.write('\n'.join('{}: {}'.format(x[0],x[1]) for x in parameters))
 #%%
+
+
+
 h_bar = 0.654 # (meV*ps)
 c = 2.9979*1e2 # (um/ps)
 eV_to_J = 1.60218*1e-19
@@ -474,14 +490,21 @@ if (long_1/nmax)**2<g0/gamma_ph:
 
 
 F = 1
+F_probe = 1
 corr = 0.0 #0.35
 detuning = 0.17/h_bar
 noise = 0
 omega_probe=0
 
-tempo_type = "to_turning_pt"
+pump_radius = 60
 
-simu = ggpe(nmax_1, nmax_2, long_1, long_2, tempo_type, t_max, t_stationary, t_obs, t_probe, t_noise, dt_frame, gamma_exc, 
+
+parameters=[('h_bar',h_bar), ('h_bar_SI', h_bar_SI), ('c', c), ('eV_to_J', eV_to_J), ('rabi (div by 2hbar)', rabi*2*h_bar), ('g0 (div by hbar)', g0*h_bar), ('gamma_exc (div by hbar)', gamma_exc*h_bar), 
+            ('gamma_ph (div by hbar)', gamma_ph*h_bar), ('omega_exc (div by hbar)', omega_exc*h_bar), ('omega_cav (div by hbar)', omega_cav*h_bar), ('n_cav', n_cav), ('k_z', k_z), ('t_min', t_min), ('t_obs', t_obs), 
+            ('t_noise', t_noise), ('t_probe', t_probe), ('t_stationary', t_stationary), ('t_max', t_max), ('dt_frame', dt_frame), ('nmax_1', nmax_1), ('nmax_2', nmax_2), ('long_1', long_1), ('long_2', long_2), ('F', F), ('F_probe', F_probe),
+            ('corr', corr), ('detuning (dib by hbar)', detuning*h_bar), ('noise', noise), ('omega_probe', omega_probe), ('pump_radius', pump_radius)] 
+
+simu = ggpe(nmax_1, nmax_2, long_1, long_2, t_max, t_stationary, t_obs, t_probe, t_noise, dt_frame, gamma_exc, 
         gamma_ph, noise, g0, detuning, omega_probe, omega_exc, omega_cav, rabi, k_z)
 
 
@@ -490,46 +513,25 @@ R = simu.R
 THETA = simu.THETA
 X = simu.X
 Y = simu.Y
-pump_radius = 60
+
 
 
 #Build laser+probe field
 
-# F_laser_r = simu.F_laser_r
-# F_laser_t = simu.F_laser_t
-# F_probe_r = simu.F_probe_r
-# F_probe_t = simu.F_probe_t
+#Pump
+tophat(simu.F_laser_r, F, R, radius = pump_radius)
+#gaussian(simu.F_laser_r, F, R, radius = pump_radius)
+#vortex_beam(F_laser_r, F, R, THETA, waist = 75, inner_waist = 22, C = 15)
+#shear_layer(F_laser_r, F, X, Y, kx = 1)
+#plane_wave(F_laser_r, F, X, kx = 0.5)
+to_turning_point(simu.F_laser_t, simu.time, t_up = 400, t_down = 400)
+#bistab_cycle(simu.F_laser_t, simu.time, simu.t_max)
+#turn_on_pump(simu.F_laser_t, simu.time, t_up = 200)
 
-tophat_new(simu.F_laser_r, F, R, pump_radius)
-#gaussian_new(simu.F_laser_r, F, R, pump_radius)
-#vortex_beam_new(F_laser_r, R, THETA)
-#shear_layer_new(F_laser_r, X, Y, kx=1)
-#plane_wave_new(F_laser_r, X, kx=0.5)
-ring_new(simu.F_probe_r, F, R, pump_radius, delta_radius=20)
-#radial_expo_new(F_probe_r, R, THETA, m_probe=10, p_probe=5)
-to_turning_point_new(simu.F_laser_t, simu.time)
-tempo_probe_new(simu.F_probe_t, omega_probe, t_probe, simu.time)
-
-
-
-#previous method
-#simu.tophat(F, pump_radius)
-#simu.gaussian(F, pump_radius)
-#simu.vortex_beam()
-#simu.shear_layer(kx=1)
-#simu.plane_wave(kx=0.5)
-#simu.ring(F, pump_radius, delta_radius=20)
-#simu.radial_expo(m_probe=10, p_probe=5)
-
-# F_laser_prev = simu.F_laser
-# F_probe_prev = simu.F_probe
-
-
-
-
-
-
-
+#Probe
+ring(simu.F_probe_r, F_probe, R, radius = pump_radius, delta_radius = 20)
+#radial_expo(F_probe_r, F_probe, R, THETA, m_probe = 10, p_probe = 5)
+tempo_probe(simu.F_probe_t, omega_probe, t_probe, simu.time)
 
 
 folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/first_runs"
@@ -553,9 +555,8 @@ except:
     
     
     
-    
 simu.evolution()
 
 # save_data_giant_vortex(folder_DATA, F_laser_r, F_laser_prev, F_probe_r, F_probe_prev)
-save_data_giant_vortex(folder_DATA)
+save_data_giant_vortex(folder_DATA, parameters)
 
