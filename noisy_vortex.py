@@ -502,7 +502,7 @@ pump_radius = 60
 parameters=[('h_bar',h_bar), ('h_bar_SI', h_bar_SI), ('c', c), ('eV_to_J', eV_to_J), ('rabi (div by 2hbar)', rabi*2*h_bar), ('g0 (div by hbar)', g0*h_bar), ('gamma_exc (div by hbar)', gamma_exc*h_bar), 
             ('gamma_ph (div by hbar)', gamma_ph*h_bar), ('omega_exc (div by hbar)', omega_exc*h_bar), ('omega_cav (div by hbar)', omega_cav*h_bar), ('n_cav', n_cav), ('k_z', k_z), ('t_min', t_min), ('t_obs', t_obs), 
             ('t_noise', t_noise), ('t_probe', t_probe), ('t_stationary', t_stationary), ('t_max', t_max), ('dt_frame', dt_frame), ('nmax_1', nmax_1), ('nmax_2', nmax_2), ('long_1', long_1), ('long_2', long_2), ('F', F), ('F_probe', F_probe),
-            ('corr', corr), ('detuning (dib by hbar)', detuning*h_bar), ('noise', noise), ('omega_probe', omega_probe), ('pump_radius', pump_radius)] 
+            ('corr', corr), ('detuning (div by hbar)', detuning*h_bar), ('noise', noise), ('omega_probe', omega_probe), ('pump_radius', pump_radius)] 
 
 simu = ggpe(nmax_1, nmax_2, long_1, long_2, t_max, t_stationary, t_obs, t_probe, t_noise, dt_frame, gamma_exc, 
         gamma_ph, noise, g0, detuning, omega_probe, omega_exc, omega_cav, rabi, k_z)
