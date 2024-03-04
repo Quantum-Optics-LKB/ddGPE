@@ -311,16 +311,16 @@ class ggpe():
         omega_turning_field = self.omega_pump
         self.omega_pump *= 0
         self.omega_probe = omega_probe
-        self.omega = np.zeros((2, self.nmax_2, self.nmax_1), dtype=np.complex64)
+        self.omega = np.zeros((2, self.nmax_1, self.nmax_2), dtype=np.complex64)
         self.omega[0, :, :] = self.omega_exc - omega_turning_field
         self.omega[1, :, :] = self.omega_cav * (np.sqrt(1 + (K_1**2 + K_2**2)/self.k_z**2)) - omega_turning_field
 
         #todo: define m_LP from k_z, hbar, C02, outside of the class
         dk = np.abs(k_1[1]-k_1[0])    #O: defining only one dk in this way may give problems if nmax1 != nmax2
-        LB = (self.omega[0,:,self.nmax_1//2] + self.omega[1,:,self.nmax_1//2])/2 - 0.5 * \
-            np.sqrt((self.omega[1,:,self.nmax_1//2] - self.omega[0,:,self.nmax_1//2])**2 + 4*self.rabi**2)
+        self.LB = (self.omega[0,:,self.nmax_2//2] + self.omega[1,:,self.nmax_2//2])/2 - 0.5 * \
+            np.sqrt((self.omega[1,:,self.nmax_2//2] - self.omega[0,:,self.nmax_2//2])**2 + 4*self.rabi**2)
         h_bar = 0.654 #[meV*ps]
-        E_lp_kk = np.gradient(np.gradient(h_bar*LB,dk),dk)
+        E_lp_kk = np.gradient(np.gradient(h_bar*self.LB,dk),dk)
         self.m_LP = h_bar**2/E_lp_kk[self.nmax_2//2]
 
         self.omega[0, :, :] = np.fft.fftshift(self.omega[0, :, :])
@@ -414,6 +414,6 @@ class ggpe():
                 if r_t>=self.dt_frame:
                     self.mean_cav_t_x_y[i_frame,:,:] = phi2
                     self.mean_exc_t_x_y[i_frame,:,:] = phi1
-                    self.F_t[i_frame] = cp.max(cp.abs(self.F_laser_t))
+                    self.F_t[i_frame] = cp.max(cp.abs(self.F_laser_t[k]))
                     i_frame += 1
                     r_t = 0
