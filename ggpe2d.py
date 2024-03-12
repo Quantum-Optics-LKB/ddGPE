@@ -393,7 +393,7 @@ class ggpe():
         phi_up = self.phi_pol[1, :, :]
         
         # # REAL_SPACE
-        laser_excitation(phi2, self.F_laser_r[:,:], self.F_laser_t[k], self.F_probe_r[:,:], self.F_probe_t[k], self.dt, self.F_pump, self.F_probe)
+        laser_excitation(phi2, self.F_laser_r[:,:], self.F_laser_t[k], self.F_probe_r[:,:], self.F_probe_t[k], self.F_pump, self.F_probe, self.dt)
         single_particle_pot(phi2, self.dt, self.v_gamma)
         non_linearity(phi1, self.dt, self.g0)
 
@@ -413,6 +413,8 @@ class ggpe():
         if k*self.dt >= self.t_noise:
             rand1 = cp.random.normal(loc = 0, scale = self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64) + 1j*cp.random.normal(loc = 0, scale = self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64)
             rand2 = cp.random.normal(loc = 0, scale = self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64) + 1j*cp.random.normal(loc = 0, scale = self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64)
+            # rand1 = cp.random.normal(loc = 0, scale = 5*self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64) + 1j*cp.random.normal(loc = 0, scale = 5*self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64)
+            # rand2 = cp.random.normal(loc = 0, scale = 5*self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64) + 1j*cp.random.normal(loc = 0, scale = 5*self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64)
             add_noise(phi1, phi2, rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv)
             # check complex normal distribution, circularly symmetric central case in wikipedia. If no mistake we have complex normal distribution 
             # for the random variable Z=X+iY with std gamma (real) iff X and Y have std gamma/2 

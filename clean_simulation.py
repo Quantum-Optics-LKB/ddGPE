@@ -1,17 +1,17 @@
 import numpy as np
 import cupy as cp
-from ddGPE_fork_oscar.ggpe2d import ggpe
-from ddGPE_fork_oscar.ggpe2d import tophat
-from ddGPE_fork_oscar.ggpe2d import gaussian
-from ddGPE_fork_oscar.ggpe2d import vortex_beam
-from ddGPE_fork_oscar.ggpe2d import shear_layer
-from ddGPE_fork_oscar.ggpe2d import plane_wave
-from ddGPE_fork_oscar.ggpe2d import ring
-from ddGPE_fork_oscar.ggpe2d import radial_expo
-from ddGPE_fork_oscar.ggpe2d import to_turning_point
-from ddGPE_fork_oscar.ggpe2d import bistab_cycle
-from ddGPE_fork_oscar.ggpe2d import turn_on_pump
-from ddGPE_fork_oscar.ggpe2d import tempo_probe
+from ggpe2d import ggpe
+from ggpe2d import tophat
+from ggpe2d import gaussian
+from ggpe2d import vortex_beam
+from ggpe2d import shear_layer
+from ggpe2d import plane_wave
+from ggpe2d import ring
+from ggpe2d import radial_expo
+from ggpe2d import to_turning_point
+from ggpe2d import bistab_cycle
+from ggpe2d import turn_on_pump
+from ggpe2d import tempo_probe
 import os
 
 
@@ -19,6 +19,9 @@ def save_raw_data(folder,parameters):
     
     #Save experimets parameters
     with open(folder+"/parameters.txt", "w") as f:
+        f.write('[parameters]\n')
+        f.write('folder: ' + folder)
+        f.write('\n')
         f.write('\n'.join('{}: {}'.format(x[0],x[1]) for x in parameters))
         
     #Import from simu arrays to be saved
@@ -81,12 +84,12 @@ gamma_LP = X02 * gamma_exc + C02 * gamma_ph
 
 # Time parameters
 t_min = 0 # (ps) initial time of evolution
-t_obs = 0 # (ps) time from which the observation starts
-t_noise = 1e9
+t_obs = 1751 # (ps) time from which the observation starts
+t_noise = 0 # (ps) time from which the noise starts
 t_probe = 1e9
 t_stationary = 1749
-t_max = 2500 # (ps) final time of evolution
-dt_frame = 1/(0.1) #cst/delta_E avec delta_E la résolution en énergie en meV
+t_max = 2750 # (ps) final time of evolution
+dt_frame = 1/(0.5) #cst/delta_E avec delta_E la résolution/omega_max en énergie en meV
 n_frame = int((t_max-t_obs)/dt_frame)+1
 print("dt_frame is %s"%(dt_frame))
 print("n_frame is %s"%(n_frame))
@@ -97,12 +100,12 @@ nmax_1, nmax_2 = nmax, nmax
 long_1, long_2 = 256, 256
 
 # Pump and probe parameters
-F_pump = 1.1
-F_probe = 1
+F_pump = 2
+F_probe = 0
 corr = 0.0 #0.35
 detuning = 0.17/h_bar
 omega_probe=0
-pump_radius = 60
+pump_radius = 80
 pump_profile = " "
 probe_profile = " "
 
@@ -123,7 +126,7 @@ X = simu.X
 Y = simu.Y
 
 omega_LP0 = simu.LB[simu.nmax_1//2]/h_bar
-delta_LP = omega_cav - omega_LP0
+delta_LP = omega_cav - omega_LP0 
 
 #Build pump and probe fields: ----------------------------------------------------------
 
@@ -142,14 +145,16 @@ pump_profile = tophat(simu.F_laser_r, R, radius = pump_radius, pump_profile = pu
 
 #Pump's temporal profile
 
-#pump_profile = to_turning_point(simu.F_laser_t, simu.time, t_up = 400, t_down = 400, pump_profile = pump_profile)
+pump_profile = to_turning_point(simu.F_laser_t, simu.time, t_up = 400, t_down = 400, pump_profile = pump_profile)
 
-pump_profile = bistab_cycle(simu.F_laser_t, simu.time, simu.t_max, pump_profile = pump_profile)
+#pump_profile = bistab_cycle(simu.F_laser_t, simu.time, simu.t_max, pump_profile = pump_profile)
 
 #pump_profile = turn_on_pump(simu.F_laser_t, simu.time, t_up = 200, pump_profile = pump_profile)
 
 
 #Probe's spacial profile
+
+#probe_profile = plane_wave(simu.F_probe_r, X=X, kx = 1, pump_profile = probe_profile)
 
 probe_profile = ring(simu.F_probe_r, R, radius = pump_radius, delta_radius = 20, probe_profile = probe_profile)
 
@@ -169,8 +174,8 @@ parameters=[('h_bar',h_bar), ('h_bar_SI', h_bar_SI), ('c', c), ('eV_to_J', eV_to
             ('t_noise', t_noise), ('t_probe', t_probe), ('t_stationary', t_stationary), ('t_max', t_max), ('dt_frame', dt_frame), ('nmax_1', nmax_1), ('nmax_2', nmax_2), ('long_1', long_1), ('long_2', long_2), ('F_pump', F_pump), ('F_probe', F_probe),
             ('corr', corr), ('detuning (div by hbar)', detuning*h_bar), ('omega_probe', omega_probe), ('Pump_profile', pump_profile), ('Probe_profile', probe_profile)] 
 
-folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/bistability"
-string_name="_tophat"
+folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/dispersion"
+string_name="_tophat80_beg_noisy_Fpump2"
 
 try:
     os.mkdir(folder_DATA)
