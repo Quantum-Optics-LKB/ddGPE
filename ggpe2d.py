@@ -28,27 +28,22 @@ def non_linearity(phi1: cp.ndarray, dt: float, g0: float) -> None:
     """
     phi1 *= cp.exp(-1j*dt*g0*cp.abs(phi1)**2)
 
-@cp.fuse(kernel_name="resonant_excitation")
-def resonant_excitation(phi2: cp.ndarray, F_laser_t: cp.ndarray, dt: float) -> None:
-    """A fused kernel to apply resonant_excitation term
-
-    Args:
-        phi (cp.ndarray): The field in ph,exc basis
-        F_laser_t (float): Excitation laser field
-        dt (float): Propagation step in ps
-    """
-    phi2 -= F_laser_t*dt*1j
-
+    
 @cp.fuse(kernel_name="probe_excitation")
-def probe_excitation(phi2: cp.ndarray, F_probe_t: cp.ndarray, dt: float) -> None:
-    """A fused kernel to apply probe excitation term
+def laser_excitation(phi2: cp.ndarray, F_laser_r: cp.ndarray, F_laser_t: float, F_probe_r: cp.ndarray, F_probe_t: cp.complex64, F_pump: float, F_probe: float, dt: float) -> None:
+    """A fused kernel to apply the pump and probe excitation terms to the photon field
 
     Args:
-        phi (cp.ndarray): The field in ph,exc basis
-        F_probe_t (float): Probe field
+        phi2 (cp.ndarray): Photonic field in ph,exc basis
+        F_laser_r (cp.ndarray): Spatial mode of the laser pump field
+        F_laser_t (float): Temporal dependency of the laser pump field at corresponding time
+        F_probe_r (cp.ndarray): Spatial mode of the probe field
+        F_probe_t (cp.complex64): Temporal dependency of the probe field at corresponding time
         dt (float): Propagation step in ps
     """
-    phi2 -= F_probe_t*dt*1j
+    phi2 -= F_pump*F_laser_r*F_laser_t*dt*1j
+    phi2 -= F_probe*F_probe_r*F_probe_t*dt*1j
+
 
 @cp.fuse(kernel_name="single_particle_pot")
 def single_particle_pot(phi2: cp.ndarray, dt: float, v_gamma: float) -> None:
@@ -63,16 +58,19 @@ def single_particle_pot(phi2: cp.ndarray, dt: float, v_gamma: float) -> None:
 
 @cp.fuse(kernel_name="add_noise")
 def add_noise(phi1: cp.ndarray, phi2: cp.ndarray, rand1: cp.ndarray, rand2: cp.ndarray, v_gamma: cp.ndarray, gamma_exc: float, gamma_ph: float,
-            dv: float, noise_exc: float, noise_ph: float) -> None:
-    """A fused kernel to add gaussian noise
+            dv: float) -> None:
+    """A fused kernel to add gaussian noise (additive white gaussian noise)
 
     Args:
         phi (cp.ndarray): The field in ph,exc basis
         dt (float): Propagation step in ps
         v_gamma (float): Loss at the edges of the grid
     """
-    phi1 += noise_exc*cp.sqrt(gamma_exc/4*dv)*rand1
-    phi2 += noise_ph*cp.sqrt((v_gamma+gamma_ph)/4*dv)*rand2
+    
+    # phi1 += noise_exc*cp.sqrt(gamma_exc/(4*dv))*rand1
+    # phi2 += noise_ph*cp.sqrt((v_gamma+gamma_ph)/(4*dv))*rand2
+    phi1 += cp.sqrt(gamma_exc/(4*dv))*rand1
+    phi2 += cp.sqrt((v_gamma+gamma_ph)/(4*dv))*rand2
 
 @cp.fuse(kernel_name="linear_step")
 def linear_step(phi1: cp.ndarray, phi2: cp.ndarray, phi_up: cp.ndarray, phi_lp: cp.ndarray, propagator_diag: cp.ndarray, hopfield_coefs: cp.ndarray) -> None:
@@ -99,13 +97,174 @@ def linear_step(phi1: cp.ndarray, phi2: cp.ndarray, phi_up: cp.ndarray, phi_lp: 
     phi1 += cp.multiply(phi_up, hopfield_coefs[1,:,:])
     cp.multiply(phi_lp, hopfield_coefs[1,:,:], phi2) 
     phi2 += cp.multiply(phi_up, hopfield_coefs[0,:,:])
+           
 
+def tophat(F_laser_r: cp.ndarray, R: cp.ndarray, radius: float = 75, pump_profile: str = ""):
+    """A function to create a tophat spatial mode for the laser pump field
+
+    Args:
+        F_laser_r (cp.ndarray): self.F_laser_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
+        F (float): Intensity of the laser pump field
+        R (cp.ndarray): array of the distance from the center of the grid
+        radius (float, optional): radius of the beam. Defaults to 75.
+    """
+    F_laser_r[R > radius] = 0
+    pump_profile += "Tophat, radius = " + str(radius) + " ; "
+    return pump_profile
+    
+
+def gaussian(F_laser_r: cp.ndarray, R: cp.ndarray, radius=75, pump_profile: str = ""):
+    """A function to create a gaussian spatial mode for the laser pump field
+
+    Args:
+        F_laser_r (cp.ndarray): self.F_laser_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
+        F (float): Intensity of the laser pump field
+        R (cp.ndarray): array of the distance from the center of the grid
+        radius (int, optional): radius (=sqrt(2)*std) of the beam. Defaults to 75.
+    """
+    F_laser_r[:,:] = F_laser_r[:,:] * cp.exp(-R[:,:]**2/radius**2) #O: identifying with Gaussian distribution, radius is sqrt(2)*std_deviation
+    pump_profile += "Gaussian, radius = " + str(radius) + " ; "
+    return pump_profile
+
+def vortex_beam(F_laser_r: cp.ndarray, R: cp.ndarray, THETA: cp.ndarray, waist=75, inner_waist: float = 22, C: int =15, pump_profile: str = ""):
+    """A function to create a vortex_beam spatial mode for the laser pump field
+
+    Args:
+        F_laser_r (cp.ndarray): self.F_laser_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
+        F (float): Intensity of the laser pump field
+        R (cp.ndarray): array of the distance from the center of the grid
+        THETA (cp.ndarray): array of the angle with respect to the positive x axis
+        waist (float, optional): _description_. Defaults to 75.
+        inner_waist (float, optional): radius of the inner waist. Defaults to 22.
+        C (int, optional): vorticity (right term???) of the vortex. Defaults to 15.
+    """
+    F_laser_r[:,:] = F_laser_r[:,:] * cp.exp(1j*C*THETA[:,:])*cp.tanh(R[:,:]/inner_waist)**C
+    pump_profile += "Vortex beam, C = " + str(C) + ", inner_waist = " + str(inner_waist) + " ; "
+    return pump_profile
+
+def shear_layer(F_laser_r: cp.ndarray, X: cp.ndarray, Y: cp.ndarray, kx: float=1, pump_profile: str = ""):
+    """A function to create a shear layer spatial mode for the laser pump field
+
+    Args:
+        F_laser_r (cp.ndarray): self.F_laser_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
+        F (float): Intensity of the laser pump field
+        X (cp.ndarray): array of dimensions (n_max1, n_max2) with the x coordinate of each point
+        Y (cp.ndarray): array of dimensions (n_max1, n_max2) with the y coordinate of each point
+        kx (float, optional): magnitude of the wavevector in the x direction. Defaults to 1.
+    """
+    phase = cp.zeros(F_laser_r.shape)
+    phase = kx*X[:,:]
+    phase[Y>0]=-phase[Y>0]
+    F_laser_r[:,:] = F_laser_r[:,:] * cp.exp(1j*phase[:,:])
+    pump_profile += "Shear layer, kx = " + str(kx) + " ; "
+    return pump_profile
+
+def plane_wave(F_laser_r: cp.ndarray, X: cp.ndarray, kx=0.5, pump_profile: str = ""):
+    """A function to create a plane wave spatial mode for the laser pump field
+
+    Args:
+        F_laser_r (cp.ndarray): self.F_laser_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
+        F (float): Intensity of the laser pump field
+        X (cp.ndarray): array of dimensions (n_max1, n_max2) with the x coordinate of each point
+        kx (float, optional): magnitude of the wavevector in the x direction. Defaults to 0.5.
+    """
+    phase = cp.zeros(X.shape)
+    phase = kx*X[:,:]
+    F_laser_r[:,:] = F_laser_r[:,:] * cp.exp(1j*phase[:,:])
+    pump_profile += "Plane wave, kx = " + str(kx) + " ; "
+    return pump_profile
+
+def ring(F_probe_r: cp.ndarray, R: cp.ndarray, radius: float, delta_radius: float, probe_profile: str = ""):
+    """A function to create a ring spatial mode for the laser probe field
+
+    Args:
+        F_probe_r (cp.ndarray): self.F_probe_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
+        F_probe (float): Intensity of the laser probe field
+        R (cp.ndarray): array of the distance from the center of the grid
+        radius (float): radius of the ring
+        delta_radius (float): total width of the ring 
+    """
+    F_probe_r[R>radius+delta_radius/2] = 0
+    F_probe_r[R<radius-delta_radius/2] = 0
+    probe_profile += "Ring, radius = " + str(radius) + ", delta_radius = " + str(delta_radius) + " ; "
+    return probe_profile
+    
+
+def radial_expo(F_probe_r: cp.ndarray, R: cp.ndarray, THETA: cp.ndarray, m_probe, p_probe, probe_profile: str = ""):
+    """A function to create a spatial mode with both radial and angular phase velocity for the laser probe field
+
+    Args:
+        F_probe_r (cp.ndarray): self.F_probe_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
+        F_probe (float): Intensity of the laser probe field
+        R (cp.ndarray): array of the distance from the center of the grid
+        THETA (cp.ndarray): array of the angle with respect to the positive x axis
+        m_probe (_type_): angular phase velocity
+        p_probe (_type_): radial phase velocity
+    """
+    F_probe_r[:,:] = F_probe_r[:,:] * cp.exp(1j*p_probe*R[:,:]) * cp.exp(1j*m_probe*THETA[:,:])
+    probe_profile += "Radial_expo, p_probe = " + str(p_probe) + ", m_probe = " + str(m_probe) + " ; "
+    return probe_profile
+
+
+def tempo_probe(F_probe_t: cp.ndarray, omega_probe: float, t_probe, time: cp.ndarray):
+    """A function to create the spatial evolution of the probe field
+
+    Args:
+        F_probe_t (cp.ndarray): self.F_probe_t as defined in class ggpe, cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        omega_probe (float): detuning of the probe with respect to the pumping field
+        t_probe (float): time at which we turn on the probe
+        time (cp.ndarray): array with the value of the time at each discretized step
+    """
+    F_probe_t[time<t_probe] = 0
+    F_probe_t[time>=t_probe] = cp.exp(-1j*(time[time>=t_probe]-t_probe)*omega_probe)
+
+
+def to_turning_point(F_laser_t: cp.ndarray, time: cp.ndarray, t_up = 400, t_down = 400, pump_profile: str = ""):
+    """A function to create the to_turning_point temporal evolution of the intensity of the pump field
+
+    Args:
+        F_laser_t (cp.ndarray): self.F_pump_t as defined in class ggpe, cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        time (cp.ndarray): array with the value of the time at each discretized step
+        t_up (float, optional): time at which we reach the maximum intensity (= 3*F). Defaults to 400.
+        t_down (float, optional): time after t_up at which we approach the working point intensity (=F). Defaults to 400.
+    """
+    F_laser_t[time<t_up] = 3*cp.exp(-((time[time<t_up]-t_up)/(t_up/2))**2)
+    F_laser_t[time>=t_up] = (1 + 2*cp.exp(-((time[time>=t_up]-t_up)/t_down)**2))
+    pump_profile += "Time profile: to turning point, t_up = " + str(t_up) + ", t_down = " + str(t_down) + " "
+    return pump_profile
+
+
+def bistab_cycle(F_laser_t: cp.ndarray, time: cp.ndarray, t_max, pump_profile: str = ""):
+    """A function to create the bistab_cycle temporal evolution of the intensity of the pump field
+
+    Args:
+        F_laser_t (cp.ndarray): self.F_pump_t as defined in class ggpe, cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        time (cp.ndarray): array with the value of the time at each discretized step
+        t_max (_type_): maximum time of the simulation
+    """
+    F_laser_t[:] = 4*cp.exp(-((time[:]-t_max//2)/(t_max//4))**2)
+    pump_profile += "Time profile: bistab_cycle, t_max = " + str(t_max) + " "
+    return pump_profile
+
+
+def turn_on_pump(F_laser_t: cp.ndarray, time: cp.ndarray, t_up=200, pump_profile: str = ""):
+    """A function to create the turn_on_pump temporal evolution of the intensity of the pump field
+
+    Args:
+        F_laser_t (cp.ndarray): self.F_pump_t as defined in class ggpe, cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        time (cp.ndarray):  array with the value of the time at each discretized step
+        t_up (int, optional): time taken to reach the maximum intensity (=F). Defaults to 200.
+    """
+    F_laser_t[time<t_up] = cp.exp(((time[time<t_up]-t_up)/(t_up/2))**2)
+    F_laser_t[time>=t_up] = 1
+    pump_profile += "Time profile: turn_on_pump, t_up = " + str(t_up) + " "
+    return pump_profile
 
 
 class ggpe():
 
-    def __init__(self, nmax_1: int, nmax_2: int, long_1: int, long_2: int, tempo_type: str, t_max: int, t_stationary: int, t_obs: int, t_probe: int, t_noise: int, dt_frame: float,
-        gamma_exc: float, gamma_ph: float, noise: float, g0: float, detuning: float, omega_probe: float, omega_exc: float, omega_cav: float, rabi: float, k_z: float) -> None:
+    def __init__(self, nmax_1: int, nmax_2: int, long_1: int, long_2: int, t_max: int, t_stationary: int, t_obs: int, t_probe: int, t_noise: int, dt_frame: float,
+        gamma_exc: float, gamma_ph: float, g0: float, detuning: float, omega_probe: float, omega_exc: float, omega_cav: float, rabi: float, k_z: float, F_pump: float, F_probe: float) -> None:
 
         self.nmax_1 = nmax_1
         self.nmax_2 = nmax_2
@@ -118,7 +277,6 @@ class ggpe():
         self.t_stationary = t_stationary
         self.t_probe = t_probe
         self.t_max = t_max
-        self.tempo_type = tempo_type
         self.dt_frame = dt_frame
         self.n_frame = int((self.t_max-self.t_obs)/self.dt_frame)+1
 
@@ -130,9 +288,12 @@ class ggpe():
         self.omega_exc = omega_exc
         self.omega_cav = omega_cav
         self.k_z = k_z
-        self.noise_exc = noise
-        self.noise_ph = noise
+        # self.noise_exc = noise
+        # self.noise_ph = noise
         self.g0 = g0
+        
+        self.F_pump = F_pump
+        self.F_probe = F_probe
 
         self.frame = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
         self.x_1 = cp.linspace(-long_1/2, +long_1/2, nmax_1, dtype = float)
@@ -141,16 +302,32 @@ class ggpe():
         self.R = cp.hypot(self.X,self.Y)
         self.THETA = cp.angle(self.X+1j*self.Y)
 
-        self.F_laser = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
-        self.F_probe = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
+        #Max energy in the system to define dt
+        #omega_max = max(omega_cav*(np.sqrt(1e0 + (k_1[0]**2+k_2[0]**2)/k_z**2)) - omega_turning_field, omega_exc - omega_turning_field)
+        omega_max = 32 #[meV]
+        cst = 4 #increase cst if you see fluctuations
+        self.dt = 1/(omega_max*cst)
+        
+        self.time = cp.arange(0, self.t_max, self.dt)  
+
+        
+        self.F_laser_r = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
+        self.F_laser_t = cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        
+        self.F_probe_r = cp.ones((nmax_1, nmax_2), dtype=cp.complex64)
+        self.F_probe_t = cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        
+           
 
         self.phi = cp.zeros((2, self.nmax_1, self.nmax_2), dtype = cp.complex64) #self.phi[0, :, :] = self.phi1=excitons and self.phi[1, :, :] = self.phi2=photons
         self.phi_pol = cp.zeros((2, self.nmax_1, self.nmax_2), dtype = cp.complex64)
 
 
         #Definition of the energies, time step and the linear evolution operator.
-        k_1 = np.linspace(-2*np.pi/self.long_1*self.nmax_1/2, 2*np.pi/self.long_1*(self.nmax_1/2-1), self.nmax_1)
-        k_2 = np.linspace(-2*np.pi/self.long_2*self.nmax_2/2, 2*np.pi/self.long_2*(self.nmax_2/2-1), self.nmax_2)
+        self.k_1 = np.linspace(-2*np.pi/self.long_1*self.nmax_1/2, 2*np.pi/self.long_1*(self.nmax_1/2-1), self.nmax_1)
+        self.k_2 = np.linspace(-2*np.pi/self.long_2*self.nmax_2/2, 2*np.pi/self.long_2*(self.nmax_2/2-1), self.nmax_2)
+        k_1=self.k_1
+        k_2=self.k_2
         K_1, K_2 = np.meshgrid(k_1, k_2)
 
         self.gamma = np.zeros((2, self.nmax_2, self.nmax_1), dtype=np.complex64)
@@ -162,16 +339,16 @@ class ggpe():
         omega_turning_field = self.omega_pump
         self.omega_pump *= 0
         self.omega_probe = omega_probe
-        self.omega = np.zeros((2, self.nmax_2, self.nmax_1), dtype=np.complex64)
+        self.omega = np.zeros((2, self.nmax_1, self.nmax_2), dtype=np.complex64)
         self.omega[0, :, :] = self.omega_exc - omega_turning_field
         self.omega[1, :, :] = self.omega_cav * (np.sqrt(1 + (K_1**2 + K_2**2)/self.k_z**2)) - omega_turning_field
 
         #todo: define m_LP from k_z, hbar, C02, outside of the class
         dk = np.abs(k_1[1]-k_1[0])    #O: defining only one dk in this way may give problems if nmax1 != nmax2
-        LB = (self.omega[0,:,self.nmax_1//2] + self.omega[1,:,self.nmax_1//2])/2 - 0.5 * \
-            np.sqrt((self.omega[1,:,self.nmax_1//2] - self.omega[0,:,self.nmax_1//2])**2 + 4*self.rabi**2)
+        self.LB = (self.omega[0,:,self.nmax_2//2] + self.omega[1,:,self.nmax_2//2])/2 - 0.5 * \
+            np.sqrt((self.omega[1,:,self.nmax_2//2] - self.omega[0,:,self.nmax_2//2])**2 + 4*self.rabi**2)
         h_bar = 0.654 #[meV*ps]
-        E_lp_kk = np.gradient(np.gradient(h_bar*LB,dk),dk)
+        E_lp_kk = np.gradient(np.gradient(h_bar*self.LB,dk),dk)
         self.m_LP = h_bar**2/E_lp_kk[self.nmax_2//2]
 
         self.omega[0, :, :] = np.fft.fftshift(self.omega[0, :, :])
@@ -179,12 +356,6 @@ class ggpe():
         
         self.omega=cp.asarray(self.omega)
         self.gamma=cp.asarray(self.gamma)
-
-        #Max energy in the system to define dt
-        #omega_max = max(omega_cav*(np.sqrt(1e0 + (k_1[0]**2+k_2[0]**2)/k_z**2)) - omega_turning_field, omega_exc - omega_turning_field)
-        omega_max = 32 #[meV]
-        cst = 4 #increase cst if you see fluctuations
-        self.dt = 1/(omega_max*cst)
         
         
 
@@ -213,75 +384,16 @@ class ggpe():
         B = (cp.exp(-0.5*(cp.multiply(cp.transpose(self.x_1+self.long_1/2), id_x_2)**2/delta_gamma_1**2)) + cp.exp(-0.5*(
             self.long_1 - (cp.multiply(cp.transpose(self.x_1+self.long_1/2), id_x_2)))**2/delta_gamma_1**2))
         self.v_gamma = gamma_boarder*(A+B)/(A*B+1)
-
-    def tophat(self, F, radius=75):
-        self.F_laser = self.F_laser * F
-        self.F_laser[self.R**2 > radius**2] = 0
-        self.pumptype = "tophat"
-
-    def gaussian(self, F, radius=75):
-        self.F_laser = self.F_laser * F * cp.exp(-self.R**2/radius**2)
-        self.pumptype = "gaussian"
-
-    def ring(self, F_probe, radius, delta_radius):
-        self.F_probe[self.R>radius+delta_radius/2] = 0
-        self.F_probe[self.R<radius-delta_radius/2] = 0
-        self.F_probe = self.F_probe * F_probe
-
-    def radial_expo(self, m_probe, p_probe):
-        self.F_probe = self.F_probe * cp.exp(1j*p_probe*self.R) * cp.exp(1j*m_probe*self.THETA)
-
-    def tempo_probe(self, t):
-        return cp.exp(-1j*t*self.omega_probe)
-
-    def vortex_beam(self, waist=75, inner_waist=22, C=15):
-        self.F_laser = self.F_laser * cp.exp(1j*C*self.THETA)\
-            *cp.tanh(self.R/inner_waist)**C
-
-    def shear_layer(self, kx: float=1):
-        phase = cp.zeros(self.X.shape)
-        phase = kx*self.X[:,:]
-        phase[self.Y>0]=-phase[self.Y>0]
-        self.F_laser = self.F_laser*cp.exp(1j*phase)
-
-    def plane_wave(self, kx=0.5):
-        phase = cp.zeros(self.X.shape)
-        phase = kx*self.X[:,:]
-        self.F_laser = self.F_laser * cp.exp(1j*phase)
-
-    def to_turning_point(self, t, t_up, t_down):
-        if t<t_up:
-            return 3*cp.exp(-((t-t_up)/(t_up/2))**2)
-        else:
-            return 1 + 2*cp.exp(-((t-t_up)/t_down)**2)
-
-    def bistab_cycle(self, t):
-        return 4*cp.exp(-((t-self.t_max//2)/(self.t_max//4))**2)
-
-    def turn_on_pump(self, t, t_up=200):
-        if t<t_up:
-            return cp.exp(((t-t_up)/(t_up/2))**2)
-        else:
-            return 1
-
-    def temp(self, t, name = "to_turning_pt", t_up=400, t_down=400) -> (cp.ndarray):
-        if self.tempo_type == "to_turning_pt":
-            return self.to_turning_point(t, t_up, t_down)
-        if self.tempo_type == "bistab_cycle":
-            return self.bistab_cycle(t)
-        if self.tempo_type == "turn_on_pump":
-            return self.turn_on_pump(t, t_up)
-
+                
+        
     def split_step(self, plan_fft, k: int) -> None:
         phi1 = self.phi[0, :, :]
         phi2 = self.phi[1, :, :]
         phi_lp = self.phi_pol[0, :, :]
         phi_up = self.phi_pol[1, :, :]
         
-        # #REAL_SPACE
-        resonant_excitation(phi2, self.F_laser_t, self.dt)
-        if k*self.dt>self.t_probe:
-           probe_excitation(phi2, self.F_probe_t, self.dt)
+        # # REAL_SPACE
+        laser_excitation(phi2, self.F_laser_r[:,:], self.F_laser_t[k], self.F_probe_r[:,:], self.F_probe_t[k], self.F_pump, self.F_probe, self.dt)
         single_particle_pot(phi2, self.dt, self.v_gamma)
         non_linearity(phi1, self.dt, self.g0)
 
@@ -299,14 +411,19 @@ class ggpe():
         
         #NOISE
         if k*self.dt >= self.t_noise:
-            rand1 = cp.random.randn(self.nmax_2, self.nmax_1) + 1j*cp.random.randn(self.nmax_2, self.nmax_1)
-            rand2 = cp.random.randn(self.nmax_2, self.nmax_1) + 1j*cp.random.randn(self.nmax_2, self.nmax_1)
-            add_noise(phi1, phi2, rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv, self.noise_exc, self.noise_ph)
+            rand1 = cp.random.normal(loc = 0, scale = self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64) + 1j*cp.random.normal(loc = 0, scale = self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64)
+            rand2 = cp.random.normal(loc = 0, scale = self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64) + 1j*cp.random.normal(loc = 0, scale = self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64)
+            # rand1 = cp.random.normal(loc = 0, scale = 5*self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64) + 1j*cp.random.normal(loc = 0, scale = 5*self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64)
+            # rand2 = cp.random.normal(loc = 0, scale = 5*self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64) + 1j*cp.random.normal(loc = 0, scale = 5*self.dt, size = (self.nmax_1, self.nmax_2), dtype = np.float64)
+            add_noise(phi1, phi2, rand1, rand2, self.v_gamma, self.gamma_exc, self.gamma_ph, self.dv)
+            # check complex normal distribution, circularly symmetric central case in wikipedia. If no mistake we have complex normal distribution 
+            # for the random variable Z=X+iY with std gamma (real) iff X and Y have std gamma/2 
 
     def evolution(self, save: bool=True) -> (cp.ndarray):
         phi1 = self.phi[0,:,:]
         phi2 = self.phi[1,:,:]
         stationary = 0
+        
         if save:
             self.mean_cav_t_x_y = cp.zeros((self.n_frame, self.nmax_1, self.nmax_2), dtype = np.complex64)
             self.mean_exc_t_x_y = cp.zeros((self.n_frame, self.nmax_1, self.nmax_2), dtype = np.complex64)
@@ -315,10 +432,10 @@ class ggpe():
             self.F_t = cp.zeros(self.n_frame, dtype = np.float32)
             r_t = 0
             i_frame = 0
+            
         plan_fft = build_fft_plan(cp.zeros((self.nmax_1, self.nmax_2), dtype=np.complex64))
+        
         for k in tqdm(range(int(self.t_max//self.dt))):
-            self.F_probe_t = self.F_probe * self.tempo_probe(k*self.dt)
-            self.F_laser_t = self.F_laser * self.temp(k*self.dt)
             self.split_step(plan_fft, k)
             if k*self.dt > self.t_stationary and stationary<1:
                 self.mean_cav_x_y_stat = phi2
@@ -329,6 +446,6 @@ class ggpe():
                 if r_t>=self.dt_frame:
                     self.mean_cav_t_x_y[i_frame,:,:] = phi2
                     self.mean_exc_t_x_y[i_frame,:,:] = phi1
-                    self.F_t[i_frame] = cp.max(cp.abs(self.F_laser_t))
+                    self.F_t[i_frame] = cp.max(cp.abs(self.F_laser_t[k]))
                     i_frame += 1
                     r_t = 0
