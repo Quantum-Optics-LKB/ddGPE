@@ -38,71 +38,71 @@ def save_raw_data(folder,parameters):
 #------------------------------------------------------------------------------------------
 #EXAMPLE 1: bistability cycle of a tophat pump:
 
-# # Laser parameters
-# detuning = 0.17/cte.h_bar # (meV/hbar) detuning between the pump and the LP energy
-# F_pump = 1.1
-# F_probe = 0
+# Laser parameters
+detuning = 0.17/cte.h_bar # (meV/hbar) detuning between the pump and the LP energy
+F_pump = 1.1
+F_probe = 0
 
-# # Grid parameters
-# Lx, Ly = 256, 256
-# Nx, Ny = 256, 256
+# Grid parameters
+Lx, Ly = 256, 256
+Nx, Ny = 256, 256
 
-# if (Lx/Nx)**2<cte.g0/cte.gamma_cav or (Ly/Ny)**2<cte.g0/cte.gamma_cav:
-#     print("WARNING: TWA NOT VALID")
+if (Lx/Nx)**2<cte.g0/cte.gamma_cav or (Ly/Ny)**2<cte.g0/cte.gamma_cav:
+    print("WARNING: TWA NOT VALID")
     
-# # Time parameters
-# t_min = 0 # (ps) initial time of evolution
-# t_max = 2000 # (ps) final time of evolution
-# t_stationary = 1e9
-# t_noise = 1e9 # (ps) time from which the noise starts
-# t_probe = 1e9 # (ps) time from which the probe starts
-# t_obs = 0 # (ps) time from which the observation starts
-# dt_frame = 1/(0.1) #cst/delta_E avec delta_E la résolution/omega_max en énergie en meV // delta_E fixes the window you will see without aliasing in frequencies, delta_E*2pi/2 = nyquist frequency 
-# n_frame = int((t_max-t_obs)/dt_frame)+1
-# print("dt_frame is %s"%(dt_frame))
-# print("n_frame is %s"%(n_frame))
-# omega_probe = 0
-# k_probe = 0
+# Time parameters
+t_min = 0 # (ps) initial time of evolution
+t_max = 2000 # (ps) final time of evolution
+t_stationary = 1e9
+t_noise = 1e9 # (ps) time from which the noise starts
+t_probe = 1e9 # (ps) time from which the probe starts
+t_obs = 0 # (ps) time from which the observation starts
+dt_frame = 1/(0.1) #cst/delta_E avec delta_E la résolution/omega_max en énergie en meV // delta_E fixes the window you will see without aliasing in frequencies, delta_E*2pi/2 = nyquist frequency 
+n_frame = int((t_max-t_obs)/dt_frame)+1
+print("dt_frame is %s"%(dt_frame))
+print("n_frame is %s"%(n_frame))
+omega_probe = 0
+k_probe = 0
 
-# simu = ggpe(cte.omega_exc, cte.omega_cav, cte.gamma_exc, cte.gamma_cav, cte.g0, cte.rabi, cte.k_z,
-#             detuning, F_pump, F_probe, 
-#             t_max, t_stationary, t_obs, dt_frame, t_noise,
-#             Lx, Ly, Nx, Ny)
+simu = ggpe(cte.omega_exc, cte.omega_cav, cte.gamma_exc, cte.gamma_cav, cte.g0, cte.rabi, cte.k_z,
+            detuning, F_pump, F_probe, 
+            t_max, t_stationary, t_obs, dt_frame, t_noise,
+            Lx, Ly, Nx, Ny)
 
-# simu.pump_spatial_profile = fc.tophat(simu.F_pump_r, simu.R, radius = 80)
-# simu.pump_temporal_profile = fc.bistab_cycle(simu.F_pump_t, simu.time, simu.t_max)
+simu.pump_spatial_profile = fc.tophat(simu.F_pump_r, simu.R, radius = 80)
+simu.pump_temporal_profile = fc.bistab_cycle(simu.F_pump_t, simu.time, simu.t_max)
 
-# #Run simulation and save data
-# folder_DATA =  "/home"  #Complete with your directory
-# string_name="_bistab_cycle_tophat80"
+#Run simulation and save data
+folder_DATA =  "/home"  #Complete with your directory
+string_name="_bistab_cycle_tophat80"
 
-# try:
-#     os.mkdir(folder_DATA)
-# except:
-#     print("folder already created")
+try:
+    os.mkdir(folder_DATA)
+except:
+    print("folder already created")
 
-# folder_DATA += "/data_set" + string_name
-# print("/data_set" + string_name)
+folder_DATA += "/data_set" + string_name
+print("/data_set" + string_name)
 
-# try:
-#     os.mkdir(folder_DATA)
-# except:
-#     print("folder already created")
+try:
+    os.mkdir(folder_DATA)
+except:
+    print("folder already created")
     
-# try:
-#     os.mkdir(folder_DATA + "/raw_arrays")
-# except:
-#     print("folder already created")
+try:
+    os.mkdir(folder_DATA + "/raw_arrays")
+except:
+    print("folder already created")
     
-# parameters = [('h_bar',cte.h_bar), ('h_bar_SI', cte.h_bar_SI), ('c', cte.c), ('eV_to_J', cte.eV_to_J), ('n_cav', cte.n_cav), 
-#               ('omega_exc (div by hbar)', cte.omega_exc*cte.h_bar), ('omega_cav (div by hbar)', cte.omega_cav*cte.h_bar), ('gamma_exc (div by hbar)', cte.gamma_exc*cte.h_bar), ('gamma_cav (div by hbar)', cte.gamma_cav*cte.h_bar), 
-#               ('g0 (div by hbar)', cte.g0*cte.h_bar), ('rabi (div by 2hbar)', cte.rabi*2*cte.h_bar), ('k_z', cte.k_z), ('detuning (div by hbar)', detuning*cte.h_bar), 
-#               ('F_pump', F_pump), ('F_probe', F_probe), ('t_min', t_min), ('t_max', t_max), ('t_stationary', t_stationary), ('t_obs', t_obs), ('dt_frame', dt_frame), ('t_noise', t_noise), ('t_probe', t_probe), 
-#               ('Nx', Nx), ('Ny', Ny), ('Lx', Lx), ('Ly', Ly),
-#               ('omega_probe', omega_probe), ('Pump_spatial_profile', simu.pump_spatial_profile), ('Pump_temporal_profile', simu.pump_temporal_profile), ('Probe_spatial_profile', simu.probe_spatial_profile), ('Probe_temporal_profile', simu.probe_temporal_profile), ("Potential_profile", simu.potential_profile)] 
+parameters = [('h_bar',cte.h_bar), ('h_bar_SI', cte.h_bar_SI), ('c', cte.c), ('eV_to_J', cte.eV_to_J), ('n_cav', cte.n_cav), 
+              ('omega_exc (div by hbar)', cte.omega_exc*cte.h_bar), ('omega_cav (div by hbar)', cte.omega_cav*cte.h_bar), ('gamma_exc (div by hbar)', cte.gamma_exc*cte.h_bar), ('gamma_cav (div by hbar)', cte.gamma_cav*cte.h_bar), 
+              ('g0 (div by hbar)', cte.g0*cte.h_bar), ('rabi (div by 2hbar)', cte.rabi*2*cte.h_bar), ('k_z', cte.k_z), ('detuning (div by hbar)', detuning*cte.h_bar), 
+              ('F_pump', F_pump), ('F_probe', F_probe), ('t_min', t_min), ('t_max', t_max), ('t_stationary', t_stationary), ('t_obs', t_obs), ('dt_frame', dt_frame), ('t_noise', t_noise), ('t_probe', t_probe), 
+              ('Nx', Nx), ('Ny', Ny), ('Lx', Lx), ('Ly', Ly),
+              ('omega_probe', omega_probe), ('Pump_spatial_profile', simu.pump_spatial_profile), ('Pump_temporal_profile', simu.pump_temporal_profile), ('Probe_spatial_profile', simu.probe_spatial_profile), ('Probe_temporal_profile', simu.probe_temporal_profile), ("Potential_profile", simu.potential_profile)] 
 
-# simu.evolution()
-# save_raw_data(folder_DATA, parameters)
+simu.evolution()
+save_raw_data(folder_DATA, parameters)
 
 #------------------------------------------------------------------------------------------
 
@@ -264,85 +264,85 @@ def save_raw_data(folder,parameters):
 
 #EXAMPLE 4: simulating 4 different probe configurations in parallel (w=0.5, k=0.5 and w=1.5, k=1 are resonant)
 
-#Laser parameters
-detuning = 0.17/cte.h_bar # (meV/hbar) detuning between the pump and the LP energy
-F_pump = 1.1
-F_probe = 1e-4
+# #Laser parameters
+# detuning = 0.17/cte.h_bar # (meV/hbar) detuning between the pump and the LP energy
+# F_pump = 1.1
+# F_probe = 1e-4
 
-#Grid parameters
-Lx, Ly = 256, 256
-Nx, Ny = 256, 256
+# #Grid parameters
+# Lx, Ly = 256, 256
+# Nx, Ny = 256, 256
 
-if (Lx/Nx)**2<cte.g0/cte.gamma_cav or (Ly/Ny)**2<cte.g0/cte.gamma_cav:
-    print("WARNING: TWA NOT VALID")
+# if (Lx/Nx)**2<cte.g0/cte.gamma_cav or (Ly/Ny)**2<cte.g0/cte.gamma_cav:
+#     print("WARNING: TWA NOT VALID")
 
-# Loading initial condition
-path_ic = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo" #Complete with your directory
-folder_ic = path_ic + "/data_set_stationary_state_at_turning_point_tophat80"
-cav_ic, exc_ic = load_raw_data(folder_ic, only_stationary = True)
-initial_state = cp.zeros((2, Nx, Ny), dtype = cp.complex64)
-initial_state[0, :, :] = cp.asarray(exc_ic)
-initial_state[1, :, :] = cp.asarray(cav_ic)
+# # Loading initial condition
+# path_ic = "/home" #Complete with your directory
+# folder_ic = path_ic + "/data_set_stationary_state_at_turning_point_tophat80"
+# cav_ic, exc_ic = load_raw_data(folder_ic, only_stationary = True)
+# initial_state = cp.zeros((2, Nx, Ny), dtype = cp.complex64)
+# initial_state[0, :, :] = cp.asarray(exc_ic)
+# initial_state[1, :, :] = cp.asarray(cav_ic)
 
-# Time parameters
-t_min = 0 # (ps) initial time of evolution
-t_max = 1050 # (ps) final time of evolution
-t_stationary = 1e9
-t_noise = 0 # (ps) time from which the noise starts
-t_probe = 0 # (ps) time from which the probe starts
-t_obs = 51 # (ps) time from which the observation starts
-dt_frame = 1/(0.5) #cst/delta_E avec delta_E la résolution/omega_max en énergie en meV // delta_E fixes the window you will see without aliasing in frequencies, delta_E*2pi/2 = nyquist frequency 
-n_frame = int((t_max-t_obs)/dt_frame)+1
-print("dt_frame is %s"%(dt_frame))
-print("n_frame is %s"%(n_frame))
-omega_probe = 0.5
-k_probe = 0.5
+# # Time parameters
+# t_min = 0 # (ps) initial time of evolution
+# t_max = 1050 # (ps) final time of evolution
+# t_stationary = 1e9
+# t_noise = 0 # (ps) time from which the noise starts
+# t_probe = 0 # (ps) time from which the probe starts
+# t_obs = 51 # (ps) time from which the observation starts
+# dt_frame = 1/(0.5) #cst/delta_E avec delta_E la résolution/omega_max en énergie en meV // delta_E fixes the window you will see without aliasing in frequencies, delta_E*2pi/2 = nyquist frequency 
+# n_frame = int((t_max-t_obs)/dt_frame)+1
+# print("dt_frame is %s"%(dt_frame))
+# print("n_frame is %s"%(n_frame))
+# omega_probe = 0.5
+# k_probe = 0.5
 
-simu = ggpe(cte.omega_exc, cte.omega_cav, cte.gamma_exc, cte.gamma_cav, cte.g0, cte.rabi, cte.k_z,
-            detuning, F_pump, F_probe, 
-            t_max, t_stationary, t_obs, dt_frame, t_noise,
-            Lx, Ly, Nx, Ny)
+# simu = ggpe(cte.omega_exc, cte.omega_cav, cte.gamma_exc, cte.gamma_cav, cte.g0, cte.rabi, cte.k_z,
+#             detuning, F_pump, F_probe, 
+#             t_max, t_stationary, t_obs, dt_frame, t_noise,
+#             Lx, Ly, Nx, Ny)
 
-simu.pump_spatial_profile = fc.tophat(simu.F_pump_r, simu.R, radius = 80)
+# simu.pump_spatial_profile = fc.tophat(simu.F_pump_r, simu.R, radius = 80)
 
-Kx_scan = cp.array([0.5, 1])
-omega_scan = cp.array([0.5, 1.5])
-simu.F_probe_r = cp.ones((Kx_scan.shape[0], 1, simu.Nx, simu.Ny), dtype=cp.complex64)
-simu.F_probe_t = cp.ones((1, omega_scan.shape[0], 1, 1, simu.time.shape[0]), dtype=cp.complex64)
-for i in range(Kx_scan.shape[0]):
-    simu.probe_spatial_profile = fc.plane_wave(simu.F_probe_r[i, :, :, :], simu.XX, Kx_scan[i])
-for j in range(omega_scan.shape[0]):
-    simu.probe_temporal_profile = fc.tempo_probe(simu.F_probe_t[:, j, :, :, :], omega_scan[j], t_probe, simu.time)
+# Kx_scan = cp.array([0.5, 1])
+# omega_scan = cp.array([0.5, 1.5])
+# simu.F_probe_r = cp.ones((Kx_scan.shape[0], 1, simu.Nx, simu.Ny), dtype=cp.complex64)
+# simu.F_probe_t = cp.ones((1, omega_scan.shape[0], 1, 1, simu.time.shape[0]), dtype=cp.complex64)
+# for i in range(Kx_scan.shape[0]):
+#     simu.probe_spatial_profile = fc.plane_wave(simu.F_probe_r[i, :, :, :], simu.XX, Kx_scan[i])
+# for j in range(omega_scan.shape[0]):
+#     simu.probe_temporal_profile = fc.tempo_probe(simu.F_probe_t[:, j, :, :, :], omega_scan[j], t_probe, simu.time)
 
-folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo" #Complete with your directory
-string_name="_2k_2w_in_parallel"
+# folder_DATA =  "/home" #Complete with your directory
+# string_name="_2k_2w_in_parallel"
 
-try:
-    os.mkdir(folder_DATA)
-except:
-    print("folder already created")
+# try:
+#     os.mkdir(folder_DATA)
+# except:
+#     print("folder already created")
 
-folder_DATA += "/data_set" + string_name
-print("/data_set" + string_name)
+# folder_DATA += "/data_set" + string_name
+# print("/data_set" + string_name)
 
-try:
-    os.mkdir(folder_DATA)
-except:
-    print("folder already created")
+# try:
+#     os.mkdir(folder_DATA)
+# except:
+#     print("folder already created")
     
-try:
-    os.mkdir(folder_DATA + "/raw_arrays")
-except:
-    print("folder already created")
+# try:
+#     os.mkdir(folder_DATA + "/raw_arrays")
+# except:
+#     print("folder already created")
     
-parameters = [('h_bar',cte.h_bar), ('h_bar_SI', cte.h_bar_SI), ('c', cte.c), ('eV_to_J', cte.eV_to_J), ('n_cav', cte.n_cav), 
-              ('omega_exc (div by hbar)', cte.omega_exc*cte.h_bar), ('omega_cav (div by hbar)', cte.omega_cav*cte.h_bar), ('gamma_exc (div by hbar)', cte.gamma_exc*cte.h_bar), ('gamma_cav (div by hbar)', cte.gamma_cav*cte.h_bar), 
-              ('g0 (div by hbar)', cte.g0*cte.h_bar), ('rabi (div by 2hbar)', cte.rabi*2*cte.h_bar), ('k_z', cte.k_z), ('detuning (div by hbar)', detuning*cte.h_bar), 
-              ('F_pump', F_pump), ('F_probe', F_probe), ('t_min', t_min), ('t_max', t_max), ('t_stationary', t_stationary), ('t_obs', t_obs), ('dt_frame', dt_frame), ('t_noise', t_noise), ('t_probe', t_probe), 
-              ('Nx', Nx), ('Ny', Ny), ('Lx', Lx), ('Ly', Ly),
-              ('omega_probe', omega_probe), ('Pump_spatial_profile', simu.pump_spatial_profile), ('Pump_temporal_profile', simu.pump_temporal_profile), ('Probe_spatial_profile', simu.probe_spatial_profile), ('Probe_temporal_profile', simu.probe_temporal_profile), ("Potential_profile", simu.potential_profile)] 
+# parameters = [('h_bar',cte.h_bar), ('h_bar_SI', cte.h_bar_SI), ('c', cte.c), ('eV_to_J', cte.eV_to_J), ('n_cav', cte.n_cav), 
+#               ('omega_exc (div by hbar)', cte.omega_exc*cte.h_bar), ('omega_cav (div by hbar)', cte.omega_cav*cte.h_bar), ('gamma_exc (div by hbar)', cte.gamma_exc*cte.h_bar), ('gamma_cav (div by hbar)', cte.gamma_cav*cte.h_bar), 
+#               ('g0 (div by hbar)', cte.g0*cte.h_bar), ('rabi (div by 2hbar)', cte.rabi*2*cte.h_bar), ('k_z', cte.k_z), ('detuning (div by hbar)', detuning*cte.h_bar), 
+#               ('F_pump', F_pump), ('F_probe', F_probe), ('t_min', t_min), ('t_max', t_max), ('t_stationary', t_stationary), ('t_obs', t_obs), ('dt_frame', dt_frame), ('t_noise', t_noise), ('t_probe', t_probe), 
+#               ('Nx', Nx), ('Ny', Ny), ('Lx', Lx), ('Ly', Ly),
+#               ('omega_probe', omega_probe), ('Pump_spatial_profile', simu.pump_spatial_profile), ('Pump_temporal_profile', simu.pump_temporal_profile), ('Probe_spatial_profile', simu.probe_spatial_profile), ('Probe_temporal_profile', simu.probe_temporal_profile), ("Potential_profile", simu.potential_profile)] 
 
-parameters.append(("initial_state_path", folder_ic))
+# parameters.append(("initial_state_path", folder_ic))
 
-simu.evolution(initial_state = initial_state)
-save_raw_data(folder_DATA, parameters)
+# simu.evolution(initial_state = initial_state)
+# save_raw_data(folder_DATA, parameters)
