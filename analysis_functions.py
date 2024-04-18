@@ -263,6 +263,7 @@ def plot_density(
     x, 
     y, 
     field, 
+    normalization = 1,
     norm = None,
     vmax = None
 ):
@@ -274,10 +275,12 @@ def plot_density(
         plt.xlabel(x[0])
         plt.ylabel(y[0])
         if vmax == None:
-            plt.pcolormesh(x[1].get(), y[1].get(), np.abs(field[1].get()) ** 2, norm = norm)
+            to_plot = (np.abs(field[1].get()) ** 2 / normalization)
+            plt.pcolormesh(x[1].get(), y[1].get(), to_plot, norm = norm)
             plt.colorbar()
         else:
-            plt.pcolormesh(x[1].get(), y[1].get(), np.abs(field[1].get()) ** 2, norm = norm, vmax = vmax)
+            to_plot = (np.abs(field[1].get()) ** 2 / normalization)
+            plt.pcolormesh(x[1].get(), y[1].get(), to_plot, norm = norm, vmax = vmax)
             plt.colorbar()
         plt.savefig(folder+"/" + field[0] + "_density.png")
         plt.close("all")
@@ -287,10 +290,12 @@ def plot_density(
             plt.xlabel(x[0])
             plt.ylabel(y[0])
             if vmax == None:
-                plt.pcolormesh(x[1].get(), y[1].get(), np.abs(field[1][i, :, :].get()) ** 2, norm = norm)
+                to_plot = (np.abs(field[1][i, :, :].get()) ** 2 / normalization)
+                plt.pcolormesh(x[1].get(), y[1].get(), to_plot, norm = norm)
                 plt.colorbar()
             else:
-                plt.pcolormesh(x[1].get(), y[1].get(), np.abs(field[1][i, :, :].get()) ** 2, norm = norm, vmax = vmax)
+                to_plot = (np.abs(field[1][i, :, :].get()) ** 2 / normalization)
+                plt.pcolormesh(x[1].get(), y[1].get(), to_plot, norm = norm, vmax = vmax)
                 plt.colorbar()
             plt.savefig(folder+"/" + field[0] + "_density_" + str(i) + ".png")
             plt.close("all")
@@ -301,10 +306,104 @@ def plot_density(
                 plt.xlabel(x[0])
                 plt.ylabel(y[0])
                 if vmax == None:
-                    plt.pcolormesh(x[1].get(), y[1].get(), np.abs(field[1][i, j, :, :].get()) ** 2, norm = norm)
+                    to_plot = (np.abs(field[1][i, j, :, :].get()) ** 2 / normalization)
+                    plt.pcolormesh(x[1].get(), y[1].get(), to_plot, norm = norm)
                     plt.colorbar()
                 else:
-                    plt.pcolormesh(x[1].get(), y[1].get(), np.abs(field[1][i, j, :, :].get()) ** 2, norm = norm, vmax = vmax)
+                    to_plot = (np.abs(field[1][i, j, :, :].get()) ** 2 / normalization)
+                    plt.pcolormesh(x[1].get(), y[1].get(), to_plot, norm = norm, vmax = vmax)
                     plt.colorbar()
                 plt.savefig(folder + "/"+field[0] + "_density_" + str(i)+"_" + str(j) + ".png")
                 plt.close("all")
+                
+def scan_output(
+    folder,
+    fluctuations_LP,
+    Kx_scan,
+    omega_scan,
+    side_square_filter,
+    Kxx,
+    Kyy,
+    kx = 0.5
+):  
+    if fluctuations_LP.shape[0] > 1:
+        output = np.zeros((fluctuations_LP.shape[1], fluctuations_LP.shape[0]))
+        for i in range(fluctuations_LP.shape[0]):
+            mask = cp.ones(fluctuations_LP.shape[-2:])
+            mask[cp.abs(Kxx-Kx_scan[i]) > side_square_filter] = 0
+            mask[cp.abs(Kyy) > side_square_filter] = 0
+            for j in range(fluctuations_LP.shape[1]):
+                avg = cp.average(cp.abs(fluctuations_LP[i,j])**2, axis=(-2, -1), weights = mask)
+                output[j,i] = avg
+        plt.figure()
+        plt.pcolormesh(Kx_scan.get(), omega_scan.get(), output[::,::], norm="log")
+        plt.colorbar()
+        plt.savefig(folder+"/scan_output_log.png")
+        plt.close("all")
+        plt.figure()
+        plt.pcolormesh(Kx_scan.get(), omega_scan.get(), output[::,::])
+        plt.colorbar()
+        plt.savefig(folder+"/scan_output.png")
+        plt.close("all")
+    
+    if fluctuations_LP.shape[0] == 1:
+        output = np.zeros((fluctuations_LP.shape[1]))
+        mask = cp.ones(fluctuations_LP.shape[-2:])
+        mask[cp.abs(Kxx - kx) > side_square_filter] = 0
+        mask[cp.abs(Kyy) > side_square_filter] = 0
+        for j in range(fluctuations_LP.shape[1]):
+            avg = cp.average(cp.abs(fluctuations_LP[0,j])**2, axis=(-2, -1), weights = mask)
+            output[j] = avg
+        plt.figure()
+        plt.plot(omega_scan.get(), np.log(output[::]))
+        plt.savefig(folder+"/scan_output.png")
+        plt.close("all")
+    
+
+def scan_output_4WM(
+    folder,
+    fluctuations_LP,
+    Kx_scan,
+    omega_scan,
+    side_square_filter,
+    Kxx,
+    Kyy,
+    kx = 0.5
+):  
+    if fluctuations_LP.shape[0] > 1:
+        output = np.zeros((fluctuations_LP.shape[1], fluctuations_LP.shape[0]))
+        for i in range(fluctuations_LP.shape[0]):
+            mask = cp.ones(fluctuations_LP.shape[-2:])
+            mask[cp.abs(Kxx + Kx_scan[i]) > side_square_filter] = 0
+            mask[cp.abs(Kyy) > side_square_filter] = 0
+            for j in range(fluctuations_LP.shape[1]):
+                avg = cp.average(cp.abs(fluctuations_LP[i,j])**2, axis=(-2, -1), weights = mask)
+                output[-1-j,-1-i] = avg
+        plt.figure()
+        plt.pcolormesh(Kx_scan.get(), omega_scan.get(), output[::,::], norm="log")
+        plt.colorbar()
+        plt.savefig(folder+"/scan_output_log_4WM.png")
+        plt.close("all")
+        plt.figure()
+        plt.pcolormesh(Kx_scan.get(), omega_scan.get(), output[::,::])
+        plt.colorbar()
+        plt.savefig(folder+"/scan_output_4WM.png")
+        plt.close("all")
+    
+    if fluctuations_LP.shape[0] == 1:
+        output = np.zeros((fluctuations_LP.shape[1]))
+        mask = cp.ones(fluctuations_LP.shape[-2:])
+        mask[cp.abs(Kxx + kx) > side_square_filter] = 0
+        mask[cp.abs(Kyy) > side_square_filter] = 0
+        for j in range(fluctuations_LP.shape[1]):
+            avg = cp.average(cp.abs(fluctuations_LP[0,j])**2, axis=(-2, -1), weights = mask)
+            output[-1-j] = avg
+        plt.figure()
+        plt.plot(omega_scan.get(), output[::])
+        plt.savefig(folder+"/scan_output_4WM.png")
+        plt.close("all")
+        plt.figure()
+        plt.plot(omega_scan.get(), np.log(output[::]))
+        plt.savefig(folder+"/scan_output_log_4WM.png")
+        plt.close("all")
+   

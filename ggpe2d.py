@@ -230,6 +230,7 @@ class ggpe():
     def evolution(
         self, 
         initial_state: cp.ndarray = None,
+        save_fields_at_time: float = 0,
         save: bool = True
     ) -> (cp.ndarray):
         """Evolve the system for a given time
@@ -252,6 +253,7 @@ class ggpe():
             self.phi = cp.zeros((2, self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64)
         
         stationary = 0
+        save_fields = 1
             
         if initial_state is not None:
             self.phi[0, ... , :, :] = initial_state[0, :, :]
@@ -259,6 +261,14 @@ class ggpe():
             stationary = 1
                 
         self.phi_pol = cp.zeros(self.phi.shape, dtype=np.complex64)
+        
+        self.mean_cav_t_x_y = None
+        self.mean_exc_t_x_y = None
+        self.mean_cav_x_y_stat = None
+        self.mean_exc_x_y_stat = None
+        self.mean_cav_t_save = None
+        self.mean_exc_t_save = None
+        self.F_t = None
         
         if save and stationary == 0:
             self.mean_cav_t_x_y = cp.zeros(self.phi[1, ... , :, :].shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
@@ -271,11 +281,16 @@ class ggpe():
         if save and stationary == 1:
             self.mean_cav_t_x_y = cp.zeros(self.phi[1, ... , :, :].shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
             self.mean_exc_t_x_y = cp.zeros(self.phi[0, ... , :, :].shape[0:-2]+(self.n_frame,self.Nx, self.Ny), dtype=np.complex64)
-            self.mean_cav_x_y_stat = None
-            self.mean_exc_x_y_stat = None
             self.F_t = cp.zeros(self.n_frame, dtype=np.float32)
             r_t = 0
             i_frame = 0
+        if save_fields_at_time > 0:
+            self.mean_cav_t_save = cp.zeros(self.phi[1, ... , :, :].shape, dtype=np.complex64)
+            self.mean_exc_t_save = cp.zeros(self.phi[0, ... , :, :].shape, dtype=np.complex64)
+            self.F_t = cp.zeros(self.n_frame, dtype=np.float32)
+            save_fields = 0
+        
+            
         
         plan_fft = self.build_fft_plans(self.phi[0, ... , :, :])
         
@@ -286,6 +301,11 @@ class ggpe():
                 self.mean_cav_x_y_stat = self.phi[1, ... , :, :]
                 self.mean_exc_x_y_stat = self.phi[0, ... , :, :]
                 stationary += 1
+            if k * self.dt >= save_fields_at_time and save_fields < 1:
+                self.mean_cav_t_save = self.phi[1, ... , :, :]
+                self.mean_exc_t_save = self.phi[0, ... , :, :]
+                print("Saving fields state: k = "+str(k)+", t = "+str(k * self.dt)+" ps")
+                save_fields += 1
             if k * self.dt >= self.t_obs and save:
                 r_t += self.dt
                 if r_t >= self.dt_frame:
