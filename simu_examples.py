@@ -1,9 +1,11 @@
 import cupy as cp
-from ggpe2d_v2 import ggpe
+from ggpe2d import ggpe
 import field_creation_functions as fc
 import physical_constants as cte
 import os
 from analysis_functions import load_raw_data
+
+cp.cuda.Device(1).use()
 
 # In this file you may find 3 different simulation examples. You can run them by uncommenting the corresponding code, completing the directories and running this file.
 
@@ -73,8 +75,8 @@ simu.pump_spatial_profile = fc.tophat(simu.F_pump_r, simu.R, radius = 80)
 simu.pump_temporal_profile = fc.bistab_cycle(simu.F_pump_t, simu.time, simu.t_max)
 
 #Run simulation and save data
-folder_DATA =  "/home"  #Complete with your directory
-string_name="_bistab_cycle_tophat80"
+folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt"  #Complete with your directory
+string_name="_bistab_cycle_tophat80_fixed_omegamax"
 
 try:
     os.mkdir(folder_DATA)
@@ -144,7 +146,7 @@ save_raw_data(folder_DATA, parameters)
 # simu.pump_temporal_profile = fc.to_turning_point(simu.F_pump_t, simu.time, t_up = 400, t_down = 400)
 
 # #Run simulation and save data
-# folder_DATA =  "/home" #Complete with your directory
+# folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #Complete with your directory
 # string_name="_stationary_state_at_turning_point_tophat80"
 
 # try:
@@ -194,7 +196,7 @@ save_raw_data(folder_DATA, parameters)
 #     print("WARNING: TWA NOT VALID")
 
 # # Loading initial condition
-# path_ic = "/home" #Complete with your directory
+# path_ic = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #Complete with your directory
 # folder_ic = path_ic + "/data_set_stationary_state_at_turning_point_tophat80"
 # cav_ic, exc_ic = load_raw_data(folder_ic, only_stationary = True)
 # initial_state = cp.zeros((2, Nx, Ny), dtype = cp.complex64)
@@ -225,7 +227,7 @@ save_raw_data(folder_DATA, parameters)
 # simu.probe_temporal_profile = fc.tempo_probe(simu.F_probe_t, omega_probe, t_probe, time=simu.time)
 
 
-# folder_DATA =  "/home" #Complete with your directory
+# folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #Complete with your directory
 # string_name="_dispersion_and_probe_k05_w05"
 
 # try:
@@ -277,7 +279,7 @@ save_raw_data(folder_DATA, parameters)
 #     print("WARNING: TWA NOT VALID")
 
 # # Loading initial condition
-# path_ic = "/home" #Complete with your directory
+# path_ic = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #Complete with your directory
 # folder_ic = path_ic + "/data_set_stationary_state_at_turning_point_tophat80"
 # cav_ic, exc_ic = load_raw_data(folder_ic, only_stationary = True)
 # initial_state = cp.zeros((2, Nx, Ny), dtype = cp.complex64)
@@ -314,7 +316,7 @@ save_raw_data(folder_DATA, parameters)
 # for j in range(omega_scan.shape[0]):
 #     simu.probe_temporal_profile = fc.tempo_probe(simu.F_probe_t[:, j, :, :, :], omega_scan[j], t_probe, simu.time)
 
-# folder_DATA =  "/home" #Complete with your directory
+# folder_DATA =  "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #Complete with your directory
 # string_name="_2k_2w_in_parallel"
 
 # try:

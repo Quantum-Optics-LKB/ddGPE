@@ -103,7 +103,6 @@ else:
 
 
 cav_field_txy, exc_field_txy, cav_stationary_xy, exc_stationary_xy, hopfield_coefs, F_t = load_raw_data(folder, path_ic)
-cav_field_txy, exc_field_txy, cav_stationary_xy, exc_stationary_xy, hopfield_coefs, F_t = cp.asarray(cav_field_txy), cp.asarray(exc_field_txy), cp.asarray(cav_stationary_xy), cp.asarray(exc_stationary_xy), cp.asarray(hopfield_coefs), cp.asarray(F_t)
 
 # cav_field_txy_bis, exc_field_txy_bis, cav_stationary_xy_bis, exc_stationary_xy_bis, hopfield_coefs_bis, F_t_bis = load_raw_data(folder_bis)
 # cav_field_txy_bis, exc_field_txy_bis, cav_stationary_xy_bis, exc_stationary_xy_bis, hopfield_coefs_bis, F_t_bis = cp.asarray(cav_field_txy_bis), cp.asarray(exc_field_txy_bis), cp.asarray(cav_stationary_xy_bis), cp.asarray(exc_stationary_xy_bis), cp.asarray(hopfield_coefs_bis), cp.asarray(F_t_bis)

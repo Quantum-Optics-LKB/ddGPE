@@ -11,8 +11,8 @@ import configparser
 #EXAMPLE 1: bistability cycle of a tophat pump:
 
 # Load data and plotting parameters
-directory = "/home" #complete with your directory
-folder = directory + "/data_set_bistab_cycle_tophat80"
+directory = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #complete with your directory
+folder = directory + "/data_set_bistab_cycle_tophat80_fixed_omegamax"
 
 initial_state = False
 
@@ -92,7 +92,7 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 
 
 # # Load data and plotting parameters
-# directory = "/home" #complete with your directory
+# directory = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #complete with your directory
 # folder = directory + "/data_set_stationary_state_at_turning_point_tophat80"
 
 # initial_state = False
@@ -195,7 +195,7 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 #EXAMPLE 3: tophat pump from initial condition, with noise and probe at resonance: seeing the dispersion relation
 
 # # Load data and plotting parameters
-# directory = "/home" #complete with your directory
+# directory = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #complete with your directory
 # folder = directory + "/data_set_dispersion_and_probe_k05_w05"
 
 # initial_state = True
@@ -281,7 +281,7 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 #EXAMPLE 4: same as 3 but with parallelized simulations
 
 # # Load data and plotting parameters
-# directory = "/home" #complete with your directory
+# directory = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #complete with your directory
 # folder = directory + "/data_set_2k_2w_in_parallel"
 
 # initial_state = True
