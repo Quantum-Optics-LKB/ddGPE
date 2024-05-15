@@ -317,6 +317,6 @@ class ggpe():
                 if r_t >= self.dt_frame:
                     self.mean_cav_t_x_y[..., i_frame, :, :] = self.phi[1, ... , :, :]
                     self.mean_exc_t_x_y[..., i_frame, :, :] = self.phi[0, ... , :, :]
-                    self.F_t[i_frame] = cp.max(cp.abs(self.F_pump_t[k]))
+                    self.F_t[i_frame] = cp.max(cp.abs(self.F_pump_t[k]*self.F_pump))
                     i_frame += 1
                     r_t = 0

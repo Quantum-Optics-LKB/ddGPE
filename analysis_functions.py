@@ -3,6 +3,7 @@ import cupy as cp
 import matplotlib.pyplot as plt
 import matplotlib
 import cv2
+#from polar_projection import reproject_image_into_polar
 
 
 def load_raw_data(
@@ -45,129 +46,49 @@ def polariton_fields(
     cav_field_txy, 
     exc_field_txy, 
     hopfield_coefs, 
-    window = None, 
-    dx = 1,
-    dy = 1,
-    omega_exc = None,
-    omega_cav = None,
-    rabi = None,
-    detuning = None,
-    k_z = None,
     only_LP = False
 ):
     """Building the LP and UP fields from the photonic and excitonic fields.
     """
-    if window == None:
-        LP_w_kx_ky = cp.zeros(cav_field_txy.shape, dtype=cp.complex64)
-        UP_w_kx_ky = cp.zeros(cav_field_txy.shape, dtype=cp.complex64)
-        Xk = hopfield_coefs[0, :, :]
-        Ck = hopfield_coefs[1, :, :]
-        cav_field_w_kx_ky = cp.fft.fftn(cav_field_txy, axes = (-3,-2,-1))
-        exc_field_w_kx_ky = cp.fft.fftn(exc_field_txy, axes = (-3,-2,-1))
-        LP_w_kx_ky[..., :, :, :] = -1 * Xk[:, :] * exc_field_w_kx_ky[..., :, :, :] + Ck[:, :] * cav_field_w_kx_ky[..., :, :, :]
-        UP_w_kx_ky[..., :, :, :] = Ck[:, :] * exc_field_w_kx_ky[..., :, :, :] + Xk[:, :] * cav_field_w_kx_ky[..., :, :, :]
-        LP_t_x_y = cp.fft.ifftn(LP_w_kx_ky, axes = (-3,-2,-1))
-        UP_t_x_y = cp.fft.ifftn(UP_w_kx_ky, axes = (-3,-2,-1)) 
-        LP_w_kx_ky[..., :, :, :] = cp.fft.fftshift(LP_w_kx_ky[..., :, :, :], axes = (-3,-2,-1))
-        UP_w_kx_ky[..., :, :, :] = cp.fft.fftshift(UP_w_kx_ky[..., :, :, :], axes = (-3,-2,-1))
-        if only_LP == True:
-            return LP_t_x_y, LP_w_kx_ky
-        if only_LP == False:
-            return LP_t_x_y, UP_t_x_y, LP_w_kx_ky, UP_w_kx_ky
-    else:
-        cav_field_txy = cav_field_txy[..., :, window[0]:window[1]+1, window[2]:window[3]+1]
-        exc_field_txy = exc_field_txy[..., :, window[0]:window[1]+1, window[2]:window[3]+1]
-        LP_w_kx_ky = cp.zeros(cav_field_txy.shape, dtype=cp.complex64)
-        UP_w_kx_ky = cp.zeros(cav_field_txy.shape, dtype=cp.complex64)
-        
-        #Different window, different frequencies, different Xk and Ck
-        hopfield_coefs_window = cp.zeros((2,)+LP_w_kx_ky.shape[-2:], dtype=cp.complex64)
-        kx = cp.fft.fftfreq(cav_field_txy.shape[-2], d=dx)
-        ky = cp.fft.fftfreq(cav_field_txy.shape[-1], d=dy)
-        Kxx, Kyy = cp.meshgrid(kx, ky)
-        omega_LP_0 = (omega_exc + omega_cav) / 2 - 0.5 * cp.sqrt((omega_exc - omega_cav) ** 2 + 4 * rabi ** 2)
-        omega_pump = detuning + omega_LP_0
-        omega = cp.zeros(hopfield_coefs_window.shape, dtype=np.complex64)
-        omega[0, :, :] = omega_exc - omega_pump
-        omega[1, :, :] = omega_cav * (cp.sqrt(1 + (Kxx ** 2 + Kyy ** 2) / k_z ** 2)) - omega_pump
-        hopfield_coefs_window[0, :, :] =  cp.sqrt((cp.sqrt((omega[1, :, :] - omega[0, :, :]) ** 2 + 4 * rabi ** 2) - (omega[1, :, :] - omega[0, :, :])) / (2 * cp.sqrt((omega[1, :, :] - omega[0, :, :]) ** 2 + 4 * rabi ** 2)))
-        hopfield_coefs_window[1, :, :] = cp.sqrt(1 - hopfield_coefs_window[1, :, :] ** 2)
-        Xk = hopfield_coefs_window[0, :, :]
-        Ck = hopfield_coefs_window[1, :, :]
-        
-        cav_field_w_kx_ky = cp.fft.fftn(cav_field_txy, axes = (-3, -2, -1))
-        exc_field_w_kx_ky = cp.fft.fftn(exc_field_txy, axes = (-3, -2, -1))
-        LP_w_kx_ky[..., :, :, :] = -1 * Xk[:, :] * exc_field_w_kx_ky[..., :, :, :] + Ck[:, :] * cav_field_w_kx_ky[..., :, :, :]
-        UP_w_kx_ky[..., :, :, :] = Ck[:, :] * exc_field_w_kx_ky[..., :, :, :] + Xk[:, :] * cav_field_w_kx_ky[..., :, :, :]
-        LP_t_x_y = cp.fft.ifftn(LP_w_kx_ky, axes = (-3, -2, -1))
-        UP_t_x_y = cp.fft.ifftn(UP_w_kx_ky, axes = (-3, -2, -1))
-        LP_w_kx_ky[..., :, :, :] = cp.fft.fftshift(LP_w_kx_ky[..., :, :, :], axes = (-3, -2, -1))
-        UP_w_kx_ky[..., :, :, :] = cp.fft.fftshift(UP_w_kx_ky[..., :, :, :], axes = (-3, -2, -1))
-        if only_LP == True:
-            return LP_t_x_y, LP_w_kx_ky
-        if only_LP == False:
-            return LP_t_x_y, UP_t_x_y, LP_w_kx_ky, UP_w_kx_ky
+    LP_w_kx_ky = cp.zeros(cav_field_txy.shape, dtype=cp.complex64)
+    UP_w_kx_ky = cp.zeros(cav_field_txy.shape, dtype=cp.complex64)
+    Xk = hopfield_coefs[0, :, :]
+    Ck = hopfield_coefs[1, :, :]
+    cav_field_w_kx_ky = cp.fft.fftn(cav_field_txy, axes = (-3,-2,-1))
+    exc_field_w_kx_ky = cp.fft.fftn(exc_field_txy, axes = (-3,-2,-1))
+    LP_w_kx_ky[..., :, :, :] = -1 * Xk[:, :] * exc_field_w_kx_ky[..., :, :, :] + Ck[:, :] * cav_field_w_kx_ky[..., :, :, :]
+    UP_w_kx_ky[..., :, :, :] = Ck[:, :] * exc_field_w_kx_ky[..., :, :, :] + Xk[:, :] * cav_field_w_kx_ky[..., :, :, :]
+    LP_t_x_y = cp.fft.ifftn(LP_w_kx_ky, axes = (-3,-2,-1))
+    UP_t_x_y = cp.fft.ifftn(UP_w_kx_ky, axes = (-3,-2,-1)) 
+    LP_w_kx_ky[..., :, :, :] = cp.fft.fftshift(LP_w_kx_ky[..., :, :, :], axes = (-3,-2,-1))
+    UP_w_kx_ky[..., :, :, :] = cp.fft.fftshift(UP_w_kx_ky[..., :, :, :], axes = (-3,-2,-1))
+    if only_LP == True:
+        return LP_t_x_y, LP_w_kx_ky
+    if only_LP == False:
+        return LP_t_x_y, UP_t_x_y, LP_w_kx_ky, UP_w_kx_ky
     
 
 def stationary_polariton_fields(
     cav_stationary_xy, 
     exc_stationary_xy, 
     hopfield_coefs, 
-    window = None, 
-    dx = 1,
-    dy = 1,
-    omega_exc = None,
-    omega_cav = None,
-    rabi = None,
-    detuning = None,
-    k_z = None,
     only_LP = False
 ):
     """Building the stationary LP and UP fields from the stationary photonic and excitonic fields.
     """
-    if window == None:
-        LP_stat_kx_ky = cp.zeros(cav_stationary_xy.shape, dtype=cp.complex64)
-        UP_stat_kx_ky = cp.zeros(cav_stationary_xy.shape, dtype=cp.complex64)
-        Xk = hopfield_coefs[0, :, :]
-        Ck = hopfield_coefs[1, :, :]
-        cav_stationary_kx_ky = cp.fft.fftn(cav_stationary_xy, axes = (-2, -1))
-        exc_stationary_kx_ky = cp.fft.fftn(exc_stationary_xy, axes = (-2, -1))
-        LP_stat_kx_ky[..., :, :] = -1 * Xk[:, :] * exc_stationary_kx_ky[..., :, :] + Ck[:, :] * cav_stationary_kx_ky[..., :, :] #you changed the minus, careful with convention
-        UP_stat_kx_ky[..., :, :] = Ck[:, :] * exc_stationary_kx_ky[..., :, :] + Xk[:, :] * cav_stationary_kx_ky[..., :, :]
-        LP_stat_x_y = cp.fft.ifftn(LP_stat_kx_ky, axes = (-2, -1))
-        UP_stat_x_y = cp.fft.ifftn(UP_stat_kx_ky, axes = (-2, -1))  #do we need to normalize as in split-step??
-        LP_stat_kx_ky[..., :, :] = cp.fft.fftshift(LP_stat_kx_ky[..., :, :], axes = (-2, -1))
-        UP_stat_kx_ky[..., :, :] = cp.fft.fftshift(UP_stat_kx_ky[..., :, :], axes = (-2, -1))
-    else:
-        cav_stationary_xy = cav_stationary_xy[..., window[0]:window[1]+1, window[2]:window[3]+1]
-        exc_stationary_xy = exc_stationary_xy[..., window[0]:window[1]+1, window[2]:window[3]+1]
-        LP_stat_kx_ky = cp.zeros(cav_stationary_xy.shape, dtype=cp.complex64)
-        UP_stat_kx_ky = cp.zeros(cav_stationary_xy.shape, dtype=cp.complex64)
-        
-        #Different window, different frequencies, different Xk and Ck
-        hopfield_coefs_window = cp.zeros((2,)+LP_stat_kx_ky.shape[-2:], dtype=cp.complex64)
-        kx = cp.fft.fftfreq(cav_stationary_xy.shape[-2], d=dx)
-        ky = cp.fft.fftfreq(cav_stationary_xy.shape[-1], d=dy)
-        Kxx, Kyy = cp.meshgrid(kx, ky)
-        omega_LP_0 = (omega_exc + omega_cav) / 2 - 0.5 * cp.sqrt((omega_exc - omega_cav) ** 2 + 4 * rabi ** 2)
-        omega_pump = detuning + omega_LP_0
-        omega = cp.zeros(hopfield_coefs_window.shape, dtype=np.complex64)
-        omega[0, :, :] = omega_exc - omega_pump
-        omega[1, :, :] = omega_cav * (cp.sqrt(1 + (Kxx ** 2 + Kyy ** 2) / k_z ** 2)) - omega_pump
-        hopfield_coefs_window[0, :, :] =  cp.sqrt((cp.sqrt((omega[1, :, :] - omega[0, :, :]) ** 2 + 4 * rabi ** 2) - (omega[1, :, :] - omega[0, :, :])) / (2 * cp.sqrt((omega[1, :, :] - omega[0, :, :]) ** 2 + 4 * rabi ** 2)))
-        hopfield_coefs_window[1, :, :] = cp.sqrt(1 - hopfield_coefs_window[1, :, :] ** 2)
-        Xk = hopfield_coefs_window[0, :, :]
-        Ck = hopfield_coefs_window[1, :, :]
-        
-        cav_stationary_kx_ky = cp.fft.fftn(cav_stationary_xy, axes = (-2, -1))
-        exc_stationary_kx_ky = cp.fft.fftn(exc_stationary_xy, axes = (-2, -1))
-        LP_stat_kx_ky[..., :, :] = -1 * Xk[:, :] * exc_stationary_kx_ky[..., :, :] + Ck[:, :] * cav_stationary_kx_ky[..., :, :]
-        UP_stat_kx_ky[..., :, :] = Ck[:, :] * exc_stationary_kx_ky[..., :, :] + Xk[:, :] * cav_stationary_kx_ky[..., :, :]
-        LP_stat_x_y = cp.fft.ifftn(LP_stat_kx_ky[..., :, :], axes = (-2, -1))
-        UP_stat_x_y = cp.fft.ifftn(UP_stat_kx_ky[..., :, :], axes = (-2, -1))
-        LP_stat_kx_ky[..., :, :] = cp.fft.fftshift(LP_stat_kx_ky[..., :, :], axes = (-2, -1))
-        UP_stat_kx_ky[..., :, :] = cp.fft.fftshift(UP_stat_kx_ky[..., :, :], axes = (-2, -1))
-        
+    LP_stat_kx_ky = cp.zeros(cav_stationary_xy.shape, dtype=cp.complex64)
+    UP_stat_kx_ky = cp.zeros(cav_stationary_xy.shape, dtype=cp.complex64)
+    Xk = hopfield_coefs[0, :, :]
+    Ck = hopfield_coefs[1, :, :]
+    cav_stationary_kx_ky = cp.fft.fftn(cav_stationary_xy, axes = (-2, -1))
+    exc_stationary_kx_ky = cp.fft.fftn(exc_stationary_xy, axes = (-2, -1))
+    LP_stat_kx_ky[..., :, :] = -1 * Xk[:, :] * exc_stationary_kx_ky[..., :, :] + Ck[:, :] * cav_stationary_kx_ky[..., :, :] #you changed the minus, careful with convention
+    UP_stat_kx_ky[..., :, :] = Ck[:, :] * exc_stationary_kx_ky[..., :, :] + Xk[:, :] * cav_stationary_kx_ky[..., :, :]
+    LP_stat_x_y = cp.fft.ifftn(LP_stat_kx_ky, axes = (-2, -1))
+    UP_stat_x_y = cp.fft.ifftn(UP_stat_kx_ky, axes = (-2, -1))  #do we need to normalize as in split-step??
+    LP_stat_kx_ky[..., :, :] = cp.fft.fftshift(LP_stat_kx_ky[..., :, :], axes = (-2, -1))
+    UP_stat_kx_ky[..., :, :] = cp.fft.fftshift(UP_stat_kx_ky[..., :, :], axes = (-2, -1))
+            
     if only_LP == True:
         return LP_stat_x_y, LP_stat_kx_ky
     if only_LP == False:
@@ -224,32 +145,35 @@ def plot_gnLP_vs_I(
     gamma_ph, 
     X02, 
     C02, 
+    h_bar = 0.654,
     detuning = None, 
     theoretical = False    #did not work, still to correct
 ):
     """Generate plot of the average density of LP nea the center of the cavity vs the intensity of the field.
     """
     Nx, Ny = LP_t_x_y.shape[-2], LP_t_x_y.shape[-1]
-    avg_density = cp.zeros(len(F_t))
+    avg_hgn = cp.zeros(len(F_t))
     LP_density = cp.abs(LP_t_x_y)**2
     radius=15
     disk = cp.zeros((Nx, Ny))
     disk[R < radius] += 1
     for i in range(len(F_t)):
-        avg_density[i] += cp.average(LP_density[i], axis=(-2, -1), weights = disk) * g
+        avg_hgn[i] += cp.average(LP_density[i], axis=(-2, -1), weights = disk) * g * h_bar
     F_intensity = np.abs(F_t.get()) ** 2
     
     plt.figure()
-    plt.xlabel("Intensity $I$")
-    plt.ylabel("Density $g_{LP}n_{LP}$")
-    plt.scatter(F_intensity, avg_density.get())
+    plt.xlabel("Intensity $I$ ")
+    plt.ylabel("Density $\hbar g_{LP}n_{LP}[meV]$")
+    plt.scatter(F_intensity, avg_hgn.get())
     if detuning != None:
         plt.hlines(detuning, 0, np.max(F_intensity), colors = "r", linestyles = "dashed", label="Detuning = " + str(detuning))
         plt.legend()
         plt.savefig(folder + "/In_loop_avg_rad" + str(radius) + ".png")
     if theoretical == True:
-        I_vs_n = np.array([n * ((detuning - g * n) ** 2 + (gamma_exc * X02 + gamma_ph * C02) ** 2 / 4) for n in np.linspace(0, 0.65, len(F_intensity))])
-        plt.scatter(F_intensity, I_vs_n, label="Theoretical curve", color = "k", marker = "x")
+        hgn = np.linspace(0, 0.25, len(F_intensity)) # (1/µm**2)
+        I = hgn * ((C02 * gamma_ph + X02 * gamma_exc) ** 2 / 4 + (detuning - hgn) ** 2) # (1/(µm**2 ps**2))
+        #I_vs_n = np.array([n * ((detuning - g * n) ** 2 + (gamma_exc * X02 + gamma_ph * C02) ** 2 / 4) for n in np.linspace(0, 0.65, len(F_intensity))])
+        plt.scatter(F_intensity, I, label="Theoretical curve", color = "k", marker = "x")
         plt.legend()
         plt.savefig(folder + "/In_loop_avg_rad" + str(radius) + "_theory.png")
     else:
@@ -406,4 +330,41 @@ def scan_output_4WM(
         plt.plot(omega_scan.get(), np.log(output[::]))
         plt.savefig(folder+"/scan_output_log_4WM.png")
         plt.close("all")
-   
+        
+def disp_bogo_kx(folder, Kx, k_pump, h_bar, n_cav, k_z, c, g, C02, n_dens, detuning):
+    """Display the theoretical Bogoliubov dispersion relation omega vs. kx.
+    """
+    print("n_dens = ", n_dens)
+    print("n_dens * hbar = ", n_dens *h_bar)
+    print("g_LP*n = ", g * n_dens)
+    print("g_LP*n *h_bar= ", g * n_dens * h_bar)
+    print("detuning = ", detuning)
+    print("detuning * h_bar= ", detuning * h_bar)
+    bogo_p = cp.zeros(Kx.shape, dtype=cp.float64)
+    bogo_m = cp.zeros(Kx.shape, dtype=cp.float64)
+    m_LP = 1 / (C02 / (h_bar * n_cav * k_z / (c * 2 * cp.pi)))
+    bogo_p = h_bar * k_pump * Kx / m_LP + cp.sqrt((h_bar * Kx ** 2 / (2 * m_LP) + 2 * g * n_dens - detuning) ** 2 - (g * n_dens) ** 2)
+    bogo_m = h_bar * k_pump * Kx / m_LP - cp.sqrt((h_bar * Kx ** 2 / (2 * m_LP) + 2 * g * n_dens - detuning) ** 2 - (g * n_dens) ** 2)
+    # print(cp.sqrt((2 * g * n_dens - detuning) ** 2 - (g * n_dens) ** 2))
+    # bogo_p = h_bar * k_pump * Kx / m_LP + cp.sqrt((h_bar * Kx ** 2 / (2 * m_LP) + 2 * 2*detuning - detuning) ** 2 - (2*detuning) ** 2)
+    # bogo_m = h_bar * k_pump * Kx / m_LP - cp.sqrt((h_bar * Kx ** 2 / (2 * m_LP) + 2 * 2*detuning - detuning) ** 2 - (2*detuning) ** 2)
+    
+    plt.figure()
+    plt.plot(Kx.get(), bogo_p.get(), color = "r", label = "Positive norm modes")
+    plt.plot(Kx.get(), bogo_m.get(), color = "b", label = "Negative norm modes")
+    plt.ylim(-cp.pi/2, cp.pi/2)
+    plt.savefig(folder + "/bogo_disp.png")
+    plt.close("all")  
+    
+# def polar_fft(folder, field, dr = 1, dt = None):
+#     """Compute the Fourier transform of a field projected onto polar coordinates.
+#     Args:
+       
+#     """
+#     field_polar, R, THETA = reproject_image_into_polar(field, Jacobian=True)
+#     field_polar_fft = np.fft.fftshift(np.fft.fft2(field_polar))
+#     dtheta = THETA[0][1]-THETA[0][0]
+#     p_list = 2*np.pi*np.fft.fftshift(np.fft.fftfreq(field_polar_fft.shape[0], d = dr))
+#     m_list = 2*np.pi*np.fft.fftshift(np.fft.fftfreq(field_polar_fft.shape[1], d = dtheta))
+    
+#     return field_polar_fft, p_list, m_list

@@ -11,8 +11,8 @@ import configparser
 #EXAMPLE 1: bistability cycle of a tophat pump:
 
 # Load data and plotting parameters
-directory = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #complete with your directory
-folder = directory + "/data_set_bistab_cycle_tophat80_fixed_omegamax"
+directory = "/home" #complete with your directory
+folder = directory + "/data_set_bistab_cycle_tophat80"
 
 initial_state = False
 
@@ -71,19 +71,17 @@ C02 /= 2*np.sqrt(delta**2 + 4*rabi**2)
 X02 = 1 - C02
 g_LP = g0*X02**2
 
-side1 = Nx
-side2 = side1
-window = (Nx//2-side1/2, Nx//2+side1/2, Ny//2-side2/2, Ny//2+side2/2)
+
 cav_field_txy, exc_field_txy, cav_stationary_xy, exc_stationary_xy, hopfield_coefs, F_t = af.load_raw_data(folder, path_ic)
-LP_t_x_y, UP_t_x_y, LP_w_kx_ky, UP_w_kx_ky = af.polariton_fields(cav_field_txy, exc_field_txy, hopfield_coefs, window = window, dx = delta_X, dy = delta_Y, omega_exc = omega_exc, omega_cav = omega_cav, rabi = rabi, detuning = detuning, k_z = k_z)
-LP_stat_x_y, UP_stat_x_y, LP_stat_kx_ky, UP_stat_kx_ky = af.stationary_polariton_fields(cav_stationary_xy, exc_stationary_xy, hopfield_coefs, window = window, dx = delta_X, dy = delta_Y, omega_exc = omega_exc, omega_cav = omega_cav, rabi = rabi, detuning = detuning, k_z = k_z)
+LP_t_x_y = af.polariton_fields(cav_field_txy, exc_field_txy, hopfield_coefs, only_LP = True, only_rspace = True)
+LP_stat_x_y, LP_stat_kx_ky = af.stationary_polariton_fields(cav_stationary_xy, exc_stationary_xy, hopfield_coefs, only_LP = True, only_rspace = False)
 
 
 #Phase and density movies:
 af.movies(folder, LP_t_x_y)
 
 #Plot bistability cycle:
-af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02, detuning = None, theoretical = False) #theoretical = False because it does not work yet aha
+af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02, h_bar = h_bar, detuning = detuning * h_bar, theoretical = False) #theoretical = False because it does not work yet aha
 
 #------------------------------------------------------------------------------------------
 
@@ -92,7 +90,7 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 
 
 # # Load data and plotting parameters
-# directory = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #complete with your directory
+# directory = "/home" #complete with your directory
 # folder = directory + "/data_set_stationary_state_at_turning_point_tophat80"
 
 # initial_state = False
@@ -152,19 +150,17 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 # X02 = 1 - C02
 # g_LP = g0*X02**2
 
-# side1 = Nx
-# side2 = side1
-# window = (Nx//2-side1/2, Nx//2+side1/2, Ny//2-side2/2, Ny//2+side2/2)
+
 # cav_field_txy, exc_field_txy, cav_stationary_xy, exc_stationary_xy, hopfield_coefs, F_t = af.load_raw_data(folder, path_ic)
-# LP_t_x_y, UP_t_x_y, LP_w_kx_ky, UP_w_kx_ky = af.polariton_fields(cav_field_txy, exc_field_txy, hopfield_coefs, window = window, dx = delta_X, dy = delta_Y, omega_exc = omega_exc, omega_cav = omega_cav, rabi = rabi, detuning = detuning, k_z = k_z)
-# LP_stat_x_y, UP_stat_x_y, LP_stat_kx_ky, UP_stat_kx_ky = af.stationary_polariton_fields(cav_stationary_xy, exc_stationary_xy, hopfield_coefs, window = window, dx = delta_X, dy = delta_Y, omega_exc = omega_exc, omega_cav = omega_cav, rabi = rabi, detuning = detuning, k_z = k_z)
+# LP_t_x_y = af.polariton_fields(cav_field_txy, exc_field_txy, hopfield_coefs, only_LP = True, only_rspace = True)
+# LP_stat_x_y, LP_stat_kx_ky = af.stationary_polariton_fields(cav_stationary_xy, exc_stationary_xy, hopfield_coefs, only_LP = True, only_rspace = False)
 
 
 # #Phase and density movies:
 # af.movies(folder, LP_t_x_y)
 
 # #Plot bistability cycle:
-# af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02, detuning = None, theoretical = False) #theoretical = False because it does not work yet aha
+# af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02, h_bar = h_bar, detuning = detuning * h_bar, theoretical = False) #theoretical = False because it does not work yet aha
 
 # #Plotting time evolution of the average LP density around the center and laser intensity (create a function for this)
 # time_plot = np.array([i*dt_frame for i in range(len(cav_field_txy))])
@@ -195,7 +191,7 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 #EXAMPLE 3: tophat pump from initial condition, with noise and probe at resonance: seeing the dispersion relation
 
 # # Load data and plotting parameters
-# directory = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #complete with your directory
+# directory = "/home" #complete with your directory
 # folder = directory + "/data_set_dispersion_and_probe_k05_w05"
 
 # initial_state = True
@@ -249,23 +245,24 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 # Ky = cp.fft.fftshift(2 * np.pi * cp.fft.fftfreq(Ny, delta_Y))
 
 
-# side1 = 80      #(change window to 80 to reduce noise around k=0)
-# side2 = side1
-# window = (Nx//2-side1/2, Nx//2+side1/2, Ny//2-side2/2, Ny//2+side2/2)
 # cav_field_txy, exc_field_txy, cav_stationary_xy, exc_stationary_xy, hopfield_coefs, F_t = af.load_raw_data(folder, path_ic)
-# LP_t_x_y, UP_t_x_y, LP_w_kx_ky, UP_w_kx_ky = af.polariton_fields(cav_field_txy, exc_field_txy, hopfield_coefs, window = window, dx = delta_X, dy = delta_Y, omega_exc = omega_exc, omega_cav = omega_cav, rabi = rabi, detuning = detuning, k_z = k_z)
-# LP_stat_x_y, UP_stat_x_y, LP_stat_kx_ky, UP_stat_kx_ky = af.stationary_polariton_fields(cav_stationary_xy, exc_stationary_xy, hopfield_coefs, window = window, dx = delta_X, dy = delta_Y, omega_exc = omega_exc, omega_cav = omega_cav, rabi = rabi, detuning = detuning, k_z = k_z)
+# LP_t_x_y = af.polariton_fields(cav_field_txy, exc_field_txy, hopfield_coefs, only_LP = True, only_rspace = True)
+# LP_stat_x_y, LP_stat_kx_ky = af.stationary_polariton_fields(cav_stationary_xy, exc_stationary_xy, hopfield_coefs, only_LP = True, only_rspace = False)
 
-# fluctuations_LP = cp.zeros(LP_w_kx_ky.shape, dtype = cp.complex64)
-# fluctuations_LP = LP_w_kx_ky - LP_stat_kx_ky
+# #Zoom in a region of homogeneous density
+# window = (Nx//2-40, Nx//2+41, Ny//2-40, Ny//2+41)
+# fluctuations_LP_txy = cp.zeros(LP_t_x_y[:, window[0]:window[1], window[2]:window[3]].shape, dtype = cp.complex64)
+# fluctuations_LP = cp.zeros(LP_t_x_y[:, window[0]:window[1], window[2]:window[3]].shape, dtype = cp.complex64)
+# fluctuations_LP_txy = LP_t_x_y[:,window[0]:window[1], window[2]:window[3]] - LP_stat_x_y[window[0]:window[1], window[2]:window[3]]
+# fluctuations_LP = cp.fft.fftshift(cp.fft.fftn(fluctuations_LP_txy, axes = (-3,-2,-1)), axes = (-3,-2,-1))
 # omega_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-3], dt_frame))
-# k_1_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-2], (X[Nx//2+side1/2-1]-X[Nx//2-side1/2])/side1)) #in 1/um PROBABLY TO CHECK ARGH
-# k_2_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-1], (Y[Ny//2+side2/2-1]-Y[Ny//2-side2/2])/side2))
+# k_1_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-2], (X[window[1]]-X[window[0]])/(window[1]-window[0]-1))) 
+# k_2_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-1], (X[window[3]]-X[window[2]])/(window[3]-window[2]-1)))
 
 
 # #Plotting stationary densities of LP:
-# af.plot_density(folder, ("$k_x$", Kx[window[0]:window[1]+1]), ("$k_y$", Ky[window[2]:window[3]+1]), ("stationary_LP_kspace", LP_stat_kx_ky))
-# af.plot_density(folder, ("$x$", X[window[0]:window[1]+1]), ("$y$", Y[window[2]:window[3]+1]), ("stationary_LP_rspace", LP_stat_x_y))
+# af.plot_density(folder, ("$k_x$", Kx), ("$k_y$", Ky), ("stationary_LP_kspace", LP_stat_kx_ky))
+# af.plot_density(folder, ("$x$", X), ("$y$", Y), ("stationary_LP_rspace", LP_stat_x_y))
 
 # #Plotting dispersions 
 # fluctuations_LP[...,:,fluctuations_LP.shape[-2]//2,fluctuations_LP.shape[-1]//2] = 0
@@ -281,7 +278,7 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 #EXAMPLE 4: same as 3 but with parallelized simulations
 
 # # Load data and plotting parameters
-# directory = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/new_dt" #complete with your directory
+# directory = "/home" #complete with your directory
 # folder = directory + "/data_set_2k_2w_in_parallel"
 
 # initial_state = True
@@ -335,23 +332,24 @@ af.plot_gnLP_vs_I(folder, LP_t_x_y, F_t, R, g_LP, gamma_exc, gamma_cav, X02, C02
 # Ky = cp.fft.fftshift(2 * np.pi * cp.fft.fftfreq(Ny, delta_Y))
 
 
-# side1 = 80      #(change window to 80 to reduce noise around k=0)
-# side2 = side1
-# window = (Nx//2-side1/2, Nx//2+side1/2, Ny//2-side2/2, Ny//2+side2/2)
-# cav_field_txy, exc_field_txy, cav_stationary_xy, exc_stationary_xy, hopfield_coefs, F_t = af.load_raw_data(folder, path_ic)
-# LP_t_x_y, UP_t_x_y, LP_w_kx_ky, UP_w_kx_ky = af.polariton_fields(cav_field_txy, exc_field_txy, hopfield_coefs, window = window, dx = delta_X, dy = delta_Y, omega_exc = omega_exc, omega_cav = omega_cav, rabi = rabi, detuning = detuning, k_z = k_z)
-# LP_stat_x_y, UP_stat_x_y, LP_stat_kx_ky, UP_stat_kx_ky = af.stationary_polariton_fields(cav_stationary_xy, exc_stationary_xy, hopfield_coefs, window = window, dx = delta_X, dy = delta_Y, omega_exc = omega_exc, omega_cav = omega_cav, rabi = rabi, detuning = detuning, k_z = k_z)
 
-# fluctuations_LP = cp.zeros(LP_w_kx_ky.shape, dtype = cp.complex64)
-# fluctuations_LP = LP_w_kx_ky - LP_stat_kx_ky
+# cav_field_txy, exc_field_txy, cav_stationary_xy, exc_stationary_xy, hopfield_coefs, F_t = af.load_raw_data(folder, path_ic)
+# LP_t_x_y = af.polariton_fields(cav_field_txy, exc_field_txy, hopfield_coefs, only_LP = True, only_rspace = True)
+# LP_stat_x_y, LP_stat_kx_ky = af.stationary_polariton_fields(cav_stationary_xy, exc_stationary_xy, hopfield_coefs, only_LP = True, only_rspace = False)
+
+# window = (Nx//2-40, Nx//2+41, Ny//2-40, Ny//2+41)
+# fluctuations_LP_txy = cp.zeros(LP_t_x_y[..., :, window[0]:window[1], window[2]:window[3]].shape, dtype = cp.complex64)
+# fluctuations_LP = cp.zeros(LP_t_x_y[..., :, window[0]:window[1], window[2]:window[3]].shape, dtype = cp.complex64)
+# fluctuations_LP_txy = LP_t_x_y[..., :,window[0]:window[1], window[2]:window[3]] - LP_stat_x_y[window[0]:window[1], window[2]:window[3]]
+# fluctuations_LP = cp.fft.fftshift(cp.fft.fftn(fluctuations_LP_txy, axes = (-3,-2,-1)), axes = (-3,-2,-1))
 # omega_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-3], dt_frame))
-# k_1_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-2], (X[Nx//2+side1/2-1]-X[Nx//2-side1/2])/side1)) #in 1/um PROBABLY TO CHECK ARGH
-# k_2_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-1], (Y[Ny//2+side2/2-1]-Y[Ny//2-side2/2])/side2))
+# k_1_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-2], (X[window[1]]-X[window[0]])/(window[1]-window[0]-1))) #in 1/um PROBABLY TO CHECK ARGH
+# k_2_list = 2*cp.pi*cp.fft.fftshift(cp.fft.fftfreq(fluctuations_LP.shape[-1], (X[window[3]]-X[window[2]])/(window[3]-window[2]-1)))
 
 
 # #Plotting stationary densities of LP:
-# af.plot_density(folder, ("$k_x$", Kx[window[0]:window[1]+1]), ("$k_y$", Ky[window[2]:window[3]+1]), ("stationary_LP_kspace", LP_stat_kx_ky))
-# af.plot_density(folder, ("$x$", X[window[0]:window[1]+1]), ("$y$", Y[window[2]:window[3]+1]), ("stationary_LP_rspace", LP_stat_x_y))
+# af.plot_density(folder, ("$k_x$", Kx), ("$k_y$", Ky), ("stationary_LP_kspace", LP_stat_kx_ky))
+# af.plot_density(folder, ("$x$", X), ("$y$", Y), ("stationary_LP_rspace", LP_stat_x_y))
 
 # #Plotting dispersions 
 # fluctuations_LP[...,:,fluctuations_LP.shape[-2]//2,fluctuations_LP.shape[-1]//2] = 0

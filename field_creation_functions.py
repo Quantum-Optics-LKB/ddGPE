@@ -244,7 +244,7 @@ def turn_on(
         time (cp.ndarray):  array with the value of the time at each discretized step
         t_up (int, optional): time taken to reach the maximum intensity (=F). Defaults to 200.
     """
-    F_laser_t[time < t_up] = cp.exp(((time[time < t_up] - t_up) / (t_up / 2)) ** 2)
+    F_laser_t[time < t_up] = cp.exp(-1 * (time[time < t_up] - t_up)**2 / (t_up / 2))
     F_laser_t[time >= t_up] = 1
     profile = "Time profile: turn_on_pump, t_up = " + str(t_up) + " "
     return profile
