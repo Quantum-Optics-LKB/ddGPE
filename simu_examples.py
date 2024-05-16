@@ -5,6 +5,7 @@ import physical_constants as cte
 import os
 from analysis_functions import load_raw_data
 
+
 # In this file you may find 3 different simulation examples. You can run them by uncommenting the corresponding code, completing the directories and running this file.
 
 def save_raw_data(folder,parameters):
@@ -194,7 +195,7 @@ save_raw_data(folder_DATA, parameters)
 #     print("WARNING: TWA NOT VALID")
 
 # # Loading initial condition
-# path_ic = "/home" #Complete with your directory
+# path_ic = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/newpush" #Complete with your directory
 # folder_ic = path_ic + "/data_set_stationary_state_at_turning_point_tophat80"
 # cav_ic, exc_ic = load_raw_data(folder_ic, only_stationary = True)
 # initial_state = cp.zeros((2, Nx, Ny), dtype = cp.complex64)
@@ -277,7 +278,7 @@ save_raw_data(folder_DATA, parameters)
 #     print("WARNING: TWA NOT VALID")
 
 # # Loading initial condition
-# path_ic = "/home" #Complete with your directory
+# path_ic = "/home/stagios/Oscar/LEON/DATA/Polaritons/2024_ManasOscar/tests_for_repo/newpush" #Complete with your directory
 # folder_ic = path_ic + "/data_set_stationary_state_at_turning_point_tophat80"
 # cav_ic, exc_ic = load_raw_data(folder_ic, only_stationary = True)
 # initial_state = cp.zeros((2, Nx, Ny), dtype = cp.complex64)

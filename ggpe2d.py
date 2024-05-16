@@ -106,15 +106,6 @@ class ggpe():
         self.Ky = 2 * np.pi * cp.fft.fftfreq(Ny, self.delta_Y)
         self.Kxx, self.Kyy = cp.meshgrid(self.Kx, self.Ky)
         
-        #Time step defined from the maximum energy, time and frequency grids
-        #omega_max = max(omega_cav*(np.sqrt(1e0 + (k_1[0]**2+k_2[0]**2)/k_z**2)) - omega_turning_field, omega_exc - omega_turning_field)
-        omega_max = 32 #[meV]                              #TO BE MODIFIED ACCORDING TO THE PARAMETERS, this is just a had hoc value
-        cst = 4 #increase cst if you see fluctuations
-        self.dt = 1 / (omega_max * cst)
-        self.time = cp.arange(0, self.t_max, self.dt)
-        self.n_frame = int((self.t_max - self.t_obs) / self.dt_frame) + 1
-        self.omega_list = 2 * cp.pi * cp.fft.fftshift(cp.fft.fftfreq(self.n_frame, self.dt_frame))
-        
         #Energies and losses in Fourier space
         #Losses (may depend on gamma in general)
         self.gamma = cp.zeros((2, self.Nx, self.Ny), dtype=np.complex64)
@@ -123,9 +114,24 @@ class ggpe():
         #Energies
         self.omega_LP_0 = (self.omega_exc + self.omega_cav) / 2 - 0.5 * cp.sqrt((self.omega_exc - self.omega_cav) ** 2 + 4 * self.rabi ** 2)
         self.omega_pump = self.detuning + self.omega_LP_0
-        self.omega = cp.zeros((2, self.Nx, self.Ny), dtype=np.complex64)
+        self.omega = cp.zeros((2, self.Nx, self.Ny), dtype=np.float64)
         self.omega[0, :, :] = self.omega_exc - self.omega_pump
         self.omega[1, :, :] = self.omega_cav * (cp.sqrt(1 + (self.Kxx ** 2 + self.Kyy ** 2) / self.k_z ** 2)) - self.omega_pump
+        
+        
+        #Time step defined from the maximum energy, time and frequency grids
+        omega_max = max(omega_cav * (np.sqrt(1 + (cp.fft.fftshift(self.Kx)[0] ** 2 + cp.fft.fftshift(self.Ky)[0]  ** 2) / k_z ** 2)) - self.omega_pump, omega_exc - self.omega_pump)
+        cst = 4 #increase cst if you see fluctuations
+        self.dt = 1 / (omega_max.get() * cst)
+        self.time = cp.arange(0, self.t_max, self.dt)
+        # omega_max = 32 #[meV]                              #OLD AD HOC WAY if for some reason we encouter errors down the road
+        # cst = 4 #increase cst if you see fluctuations
+        # self.dt = 1 / (omega_max * cst)
+        # self.time = cp.arange(0, self.t_max, self.dt)
+        self.n_frame = int((self.t_max - self.t_obs) / self.dt_frame) + 1
+        self.omega_list = 2 * cp.pi * cp.fft.fftshift(cp.fft.fftfreq(self.n_frame, self.dt_frame))
+        
+        
         
         #Hopfield coefficients in Fourier space
         self.hopfield_coefs = cp.zeros((2, self.Nx, self.Ny), dtype=np.complex64)  #self.hopfield_coefs[0,:,:]=Xk and self.hopfield_coefs[1,:,:]=Ck
@@ -230,6 +236,7 @@ class ggpe():
     def evolution(
         self, 
         initial_state: cp.ndarray = None,
+        save_fields_at_time: float = 0,
         save: bool = True
     ) -> (cp.ndarray):
         """Evolve the system for a given time
@@ -252,6 +259,7 @@ class ggpe():
             self.phi = cp.zeros((2, self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64)
         
         stationary = 0
+        save_fields = 1
             
         if initial_state is not None:
             self.phi[0, ... , :, :] = initial_state[0, :, :]
@@ -259,6 +267,14 @@ class ggpe():
             stationary = 1
                 
         self.phi_pol = cp.zeros(self.phi.shape, dtype=np.complex64)
+        
+        self.mean_cav_t_x_y = None
+        self.mean_exc_t_x_y = None
+        self.mean_cav_x_y_stat = None
+        self.mean_exc_x_y_stat = None
+        self.mean_cav_t_save = None
+        self.mean_exc_t_save = None
+        self.F_t = None
         
         if save and stationary == 0:
             self.mean_cav_t_x_y = cp.zeros(self.phi[1, ... , :, :].shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
@@ -271,26 +287,36 @@ class ggpe():
         if save and stationary == 1:
             self.mean_cav_t_x_y = cp.zeros(self.phi[1, ... , :, :].shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
             self.mean_exc_t_x_y = cp.zeros(self.phi[0, ... , :, :].shape[0:-2]+(self.n_frame,self.Nx, self.Ny), dtype=np.complex64)
-            self.mean_cav_x_y_stat = None
-            self.mean_exc_x_y_stat = None
             self.F_t = cp.zeros(self.n_frame, dtype=np.float32)
             r_t = 0
             i_frame = 0
+        if save_fields_at_time > 0:
+            self.mean_cav_t_save = cp.zeros(self.phi[1, ... , :, :].shape, dtype=np.complex64)
+            self.mean_exc_t_save = cp.zeros(self.phi[0, ... , :, :].shape, dtype=np.complex64)
+            self.F_t = cp.zeros(self.n_frame, dtype=np.float32)
+            save_fields = 0
+        
+            
         
         plan_fft = self.build_fft_plans(self.phi[0, ... , :, :])
         
         for k in tqdm(range(len(self.time))):
             self.split_step(self.phi, self.phi_pol, plan_fft, k, self.t_noise)
-            if k * self.dt > self.t_stationary and stationary < 1:
+            if k * self.dt >= self.t_stationary and stationary < 1:
                 print("Saving stationary state: k = "+str(k)+", t = "+str(k * self.dt)+" ps")
                 self.mean_cav_x_y_stat = self.phi[1, ... , :, :]
                 self.mean_exc_x_y_stat = self.phi[0, ... , :, :]
                 stationary += 1
+            if k * self.dt >= save_fields_at_time and save_fields < 1:
+                self.mean_cav_t_save = self.phi[1, ... , :, :]
+                self.mean_exc_t_save = self.phi[0, ... , :, :]
+                print("Saving fields state: k = "+str(k)+", t = "+str(k * self.dt)+" ps")
+                save_fields += 1
             if k * self.dt >= self.t_obs and save:
                 r_t += self.dt
                 if r_t >= self.dt_frame:
                     self.mean_cav_t_x_y[..., i_frame, :, :] = self.phi[1, ... , :, :]
                     self.mean_exc_t_x_y[..., i_frame, :, :] = self.phi[0, ... , :, :]
-                    self.F_t[i_frame] = cp.max(cp.abs(self.F_pump_t[k]))
+                    self.F_t[i_frame] = cp.max(cp.abs(self.F_pump_t[k]*self.F_pump))
                     i_frame += 1
                     r_t = 0

@@ -244,7 +244,7 @@ def turn_on(
         time (cp.ndarray):  array with the value of the time at each discretized step
         t_up (int, optional): time taken to reach the maximum intensity (=F). Defaults to 200.
     """
-    F_laser_t[time < t_up] = cp.exp(((time[time < t_up] - t_up) / (t_up / 2)) ** 2)
+    F_laser_t[time < t_up] = cp.exp(-1 * (time[time < t_up] - t_up)**2 / (t_up / 2))
     F_laser_t[time >= t_up] = 1
     profile = "Time profile: turn_on_pump, t_up = " + str(t_up) + " "
     return profile
@@ -363,26 +363,31 @@ def tophat_barrier(
 
 
 #Functions for simulations in parallel:
-# def parallel_plane_wave(        DOES NOT WORK CHECK AGAIN LATER
+# def tophat_parallel_plane_wave( FOR SOME REASON THIS DOES NOT WORK
 #     F_probe_r: cp.ndarray,
 #     F_probe_t: cp.ndarray,
 #     Kx_scan: cp.ndarray,
 #     omega_scan: cp.ndarray,
-#     XX: cp.ndarray,
 #     t_probe: float,
-#     time: cp.ndarray
+#     time: cp.ndarray,
+#     radius: float,
+#     XX: cp.ndarray,
+#     R: cp.ndarray
 # ):
-#     F_probe_r = cp.ones((Kx_scan.shape[0], 1)+F_probe_r.shape, dtype=cp.complex64) 
-#     print(F_probe_r.shape) 
-#     F_probe_t = cp.ones((1, omega_scan.shape[0], 1, 1)+F_probe_t.shape, dtype=cp.complex64)
+    
+#     F_probe_r = cp.ones((Kx_scan.shape[0], 1)+F_probe_r.shape, dtype=cp.complex64)
+#     print(F_probe_r.shape)
+#     F_probe_t = cp.ones((1, omega_scan.shape[0], 1, 1, time.shape[0]))
 #     print(F_probe_t.shape)
-#     phase = cp.zeros(XX.shape)
 #     for i in range(Kx_scan.shape[0]):
+#         phase = cp.zeros(XX.shape)
 #         phase = Kx_scan[i] * XX[:, :]
-#         F_probe_r[i, ..., :, :] = cp.exp(1j * phase[:, :])
+#         F_probe_r[i, :, :, :] = F_probe_r[i, :, :, :] * cp.exp(1j * phase[:, :])
+#         F_probe_r[i, :, R > radius] = 0
 #     for j in range(omega_scan.shape[0]):
-#         F_probe_t[0, j, ..., :] = cp.exp(-1j * (time - t_probe) * omega_scan[j])
-#         F_probe_t[0, j, ..., time < t_probe] = 0
-#     spatial_profile = "Parallelized plane wave, Kx_scan: [start: " + str(Kx_scan[0]) + ", end: " + str(Kx_scan[-1]) + "] ; "
-#     temporal_profile = "Parallelized plane wave, omega_scan [start: " + str(omega_scan[0]) + ", end: " + str(omega_scan[-1]) + "]; "
-#     return spatial_profile, temporal_profile
+#         F_probe_t[:, j, :, :, :] = cp.exp(-1j * (time - t_probe) * omega_scan[j])
+#         F_probe_t[:, j, :, :, time < t_probe] = 0
+#     probe_spatial_profile = "Tophat: radius ="+str(radius)+"; Parallelized plane wave, Kx_scan: [start: " + str(Kx_scan[0]) + ", end: " + str(Kx_scan[-1]) + "] ; "
+#     probe_temporal_profile = "Parallelized plane wave, omega_scan [start: " + str(omega_scan[0]) + ", end: " + str(omega_scan[-1]) + "]; "
+    
+#     return probe_spatial_profile, probe_temporal_profile
