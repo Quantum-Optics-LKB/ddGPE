@@ -6,7 +6,7 @@ You may find examples to run in the file simu_examples.py and an example of anal
 The class solves the coupled driven-dissipative or generalized Gross-Pitaevskii equation.
 
 $$
-i\hbar\frac{d\psi_X(\textbf{r}, t)}{dt}=(E_X(\textbf{k}) + V_X(\textbf{r}) + \hbar g_XX|\psi_X(\textbf{r}, t)|^2+ \hbar\Omega_R\psi_C(\textbf{r}, t) - i\hbar\frac{\Gamma_X}{2})\psi_X(\textbf{r}, t)
+i\hbar\frac{d\psi_X(\textbf{r}, t)}{dt}=(E_X(\textbf{k}) + V_X(\textbf{r}) + \hbar g_X \psi_X|\psi_X(\textbf{r}, t)|^2+ \hbar\Omega_R\psi_C(\textbf{r}, t) - i\hbar\frac{\Gamma_X}{2})\psi_X(\textbf{r}, t)
 $$
 
 $$
