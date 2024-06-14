@@ -60,8 +60,10 @@ def apply_potential(
 
 @cp.fuse(kernel_name="non_linearity")
 def non_linearity(
-    phi_exc: cp.ndarray, 
-    dt: float, 
+    phi_exc: cp.ndarray,
+    phi_cav: cp.ndarray,
+    den_reservoir: cp.ndarray,
+    dt: float,
     g0: float
 ) -> None:
     """A fused kernel to apply non linearity term
@@ -71,18 +73,19 @@ def non_linearity(
         dt (float): Propagation step in ps
         g0 (float): Interaction constant/coupling parameter
     """
-    phi_exc *= cp.exp(-1j * dt * g0 * cp.abs(phi_exc) ** 2)
+    phi_exc *= cp.exp(-1j * dt * g0 * (cp.abs(phi_exc) ** 2 + den_reservoir))
+    phi_cav *= cp.exp(-1j * dt * g0 * den_reservoir)
     
 @cp.fuse(kernel_name="linear_step")
 def linear_step(
-    phi_exc: cp.ndarray, 
-    phi_cav: cp.ndarray, 
-    phi_up: cp.ndarray, 
+    phi_exc: cp.ndarray,
+    phi_cav: cp.ndarray,
+    phi_up: cp.ndarray,
     phi_lp: cp.ndarray, 
     propagator_diag_lp: cp.ndarray,
-    propagator_diag_up: cp.ndarray,  
+    propagator_diag_up: cp.ndarray,
     X_hop: cp.ndarray,
-    C_hop: cp.ndarray
+    C_hop: cp.ndarray,
 ) -> None:
     """A fused kernel to apply the linear step in the diagonal polariton basis
 
@@ -97,7 +100,7 @@ def linear_step(
     
     cp.multiply(phi_exc, -1 * X_hop, phi_lp)
     phi_lp += cp.multiply(phi_cav, C_hop)
-    cp.multiply(phi_exc, C_hop, phi_up) 
+    cp.multiply(phi_exc, C_hop, phi_up)
     phi_up += cp.multiply(phi_cav, X_hop)
 
     cp.multiply(phi_lp, propagator_diag_lp, phi_lp)
@@ -107,14 +110,36 @@ def linear_step(
     phi_exc += cp.multiply(phi_up, C_hop)
     cp.multiply(phi_lp, C_hop, phi_cav) 
     phi_cav += cp.multiply(phi_up, X_hop)
+
+@cp.fuse(kernel_name="reservoir")
+def reservoir_losses(
+    den_reservoir: cp.ndarray,
+    phi_exc: cp.ndarray,
+    phi_cav: cp.ndarray,
+    dt: float,
+    gamma_res: float,
+    gamma_exc: float,
+    gamma_ph: float,
+) -> None:
+    """A fused kernel to apply the reservoir losses
+    
+    Args:
+    den_reservoir (cp.ndarray): Dark excitonic reservoir density
+    phi_exc (cp.ndarray): Exciton field in ph,exc basis
+    phi_cav (cp.ndarray): Photon field in ph,exc basis
+    gamma_res (float): Reservoir decay rate
+    gamma_exc (float): Exciton decay rate
+    gamma_ph (float): Photon decay rate
+    """
+    den_reservoir += dt * (gamma_res * cp.abs(phi_exc)**2 + gamma_res * cp.abs(phi_cav)**2 - gamma_exc * den_reservoir)
     
 @cp.fuse(kernel_name="add_noise")
-def add_noise(phi_exc: cp.ndarray, 
-              phi_cav: cp.ndarray, 
-              rand1: cp.ndarray, 
-              rand2: cp.ndarray, 
-              v_gamma: cp.ndarray, 
-              gamma_exc: float, 
+def add_noise(phi_exc: cp.ndarray,
+              phi_cav: cp.ndarray,
+              rand1: cp.ndarray,
+              rand2: cp.ndarray,
+              v_gamma: cp.ndarray,
+              gamma_exc: float,
               gamma_ph: float,
               dv: float
 ) -> None:

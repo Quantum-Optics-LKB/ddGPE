@@ -2,7 +2,10 @@ import numpy as np
 import cupy as cp
 import cupyx.scipy.fftpack as fftpack
 from tqdm import tqdm
-import kernels
+try:    
+    from . import kernels
+except:
+    import kernels
 
 
 class ggpe():
@@ -13,14 +16,17 @@ class ggpe():
         omega_cav: float, 
         gamma_exc: float, 
         gamma_cav: float, 
+        gamma_res: float,
+        apply_reservoir: bool,
         g0: float, 
         rabi: float,
         k_z: float, 
         detuning: float,
         F_pump: float,
         F_probe: float,
-        t_max: float, 
-        t_stationary: float, 
+        cst: float,
+        t_max: float,
+        t_stationary: float,
         t_obs: float,
         dt_frame: float,  
         t_noise: float = 1e9, 
@@ -61,8 +67,14 @@ class ggpe():
         #Physical parameters
         self.omega_exc = omega_exc
         self.omega_cav = omega_cav
-        self.gamma_exc = gamma_exc
-        self.gamma_cav = gamma_cav
+        if apply_reservoir:
+            self.gamma_exc = gamma_exc
+            self.gamma_cav = gamma_cav + gamma_res
+        else:
+            self.gamma_exc = gamma_exc
+            self.gamma_cav = gamma_cav
+        self.gamma_res = gamma_res
+        self.apply_reservoir = apply_reservoir
         self.g0 = g0
         self.rabi = rabi
         self.detuning = detuning
@@ -121,7 +133,7 @@ class ggpe():
         
         #Time step defined from the maximum energy, time and frequency grids
         omega_max = max(omega_cav * (np.sqrt(1 + (cp.fft.fftshift(self.Kx)[0] ** 2 + cp.fft.fftshift(self.Ky)[0]  ** 2) / k_z ** 2)) - self.omega_pump, omega_exc - self.omega_pump)
-        cst = 4 #increase cst if you see fluctuations
+        self.cst = cst #increase cst if you see fluctuations
         self.dt = 1 / (omega_max.get() * cst)
         self.time = cp.arange(0, self.t_max, self.dt)
         # omega_max = 32 #[meV]                              #OLD AD HOC WAY if for some reason we encouter errors down the road
@@ -139,10 +151,13 @@ class ggpe():
         self.hopfield_coefs[0, :, :] = cp.sqrt(1 - self.hopfield_coefs[1, :, :] ** 2)
         
         # Build diagonal propagator in Fourier space
+        omega_up = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
+                + cp.sqrt((self.omega[0, :, :] - self.omega[1, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2))
+        omega_lp = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
+                - cp.sqrt((self.omega[0, :, :] - self.omega[1, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2))
         self.propagator_diag = cp.zeros((2, self.Nx, self.Ny), dtype=cp.complex64)
-        self.propagator_diag[0, :, :] = cp.exp(-1j * self.dt * 0.5 * (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :]) - cp.sqrt((self.omega[0, :, :] - self.omega[1, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2)))
-        self.propagator_diag[1, :, :] = cp.exp(-1j * self.dt * 0.5 * (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :]) + cp.sqrt((self.omega[0, :, :] - self.omega[1, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2)))
-        
+        self.propagator_diag[0, :, :] = cp.exp(-1j * self.dt * omega_lp)
+        self.propagator_diag[1, :, :] = cp.exp(-1j * self.dt * omega_up)
         #Potential and losses at boundary in real space
         self.potential = cp.zeros((self.Nx, self.Ny), dtype=np.complex64)
         self.potential_profile = "Default: none"
@@ -189,6 +204,7 @@ class ggpe():
         self,
         phi: cp.array,
         phi_pol: cp.array,
+        den_reservoir: cp.array,
         plan_fft,
         k: int,   
         t_noise: float      
@@ -211,8 +227,9 @@ class ggpe():
         self.kernels.laser_excitation(phi_cav, self.F_pump, self.F_pump_r, self.F_pump_t[k], self.F_probe, self.F_probe_r, self.F_probe_t[...,k], self.dt)
         self.kernels.boundary_losses(phi_cav, self.dt, self.v_gamma)
         self.kernels.apply_potential(phi_cav, self.dt, self.potential)
-        self.kernels.non_linearity(phi_exc, self.dt, self.g0)
-        
+        self.kernels.non_linearity(phi_exc, phi_cav, den_reservoir, self.dt, self.g0)
+        if self.apply_reservoir:
+            self.kernels.reservoir_losses(den_reservoir, phi_exc, phi_cav, self.dt, self.gamma_res, self.gamma_exc, self.gamma_cav)
         #Fourier space
         plan_fft.fft(phi_exc, phi_exc, cp.cuda.cufft.CUFFT_FORWARD) # should only transform the last 2 arrays
         plan_fft.fft(phi_cav, phi_cav, cp.cuda.cufft.CUFFT_FORWARD)
@@ -267,6 +284,7 @@ class ggpe():
             stationary = 1
                 
         self.phi_pol = cp.zeros(self.phi.shape, dtype=np.complex64)
+        self.den_reservoir = cp.zeros(self.phi[0].shape, dtype=np.complex64)
         
         self.mean_cav_t_x_y = None
         self.mean_exc_t_x_y = None
@@ -279,8 +297,11 @@ class ggpe():
         if save and stationary == 0:
             self.mean_cav_t_x_y = cp.zeros(self.phi[1, ... , :, :].shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
             self.mean_exc_t_x_y = cp.zeros(self.phi[0, ... , :, :].shape[0:-2]+(self.n_frame,self.Nx, self.Ny), dtype=np.complex64)
+            self.mean_den_reservoir_t_x_y = cp.zeros(self.den_reservoir.shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
             self.mean_cav_x_y_stat = cp.zeros(self.phi[1, ... , :, :].shape, dtype = np.complex64)
             self.mean_exc_x_y_stat = cp.zeros(self.phi[0, ... , :, :].shape, dtype = np.complex64)
+            self.mean_den_reservoir_x_y_stat = cp.zeros(self.den_reservoir.shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
+            
             self.F_t = cp.zeros(self.n_frame, dtype = np.float32)
             r_t = 0
             i_frame = 0
@@ -301,11 +322,12 @@ class ggpe():
         plan_fft = self.build_fft_plans(self.phi[0, ... , :, :])
         
         for k in tqdm(range(len(self.time))):
-            self.split_step(self.phi, self.phi_pol, plan_fft, k, self.t_noise)
+            self.split_step(self.phi, self.phi_pol, self.den_reservoir, plan_fft, k, self.t_noise)
             if k * self.dt >= self.t_stationary and stationary < 1:
                 print("Saving stationary state: k = "+str(k)+", t = "+str(k * self.dt)+" ps")
                 self.mean_cav_x_y_stat = self.phi[1, ... , :, :]
                 self.mean_exc_x_y_stat = self.phi[0, ... , :, :]
+                self.mean_den_reservoir_x_y_stat = self.den_reservoir
                 stationary += 1
             if k * self.dt >= save_fields_at_time and save_fields < 1:
                 self.mean_cav_t_save = self.phi[1, ... , :, :]
@@ -317,6 +339,7 @@ class ggpe():
                 if r_t >= self.dt_frame:
                     self.mean_cav_t_x_y[..., i_frame, :, :] = self.phi[1, ... , :, :]
                     self.mean_exc_t_x_y[..., i_frame, :, :] = self.phi[0, ... , :, :]
+                    self.mean_den_reservoir_t_x_y[..., i_frame, :, :] = self.den_reservoir
                     self.F_t[i_frame] = cp.max(cp.abs(self.F_pump_t[k]*self.F_pump))
                     i_frame += 1
                     r_t = 0
