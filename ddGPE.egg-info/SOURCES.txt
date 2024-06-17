@@ -1,0 +1,6 @@
+README.md
+setup.py
+ddGPE.egg-info/PKG-INFO
+ddGPE.egg-info/SOURCES.txt
+ddGPE.egg-info/dependency_links.txt
+ddGPE.egg-info/top_level.txt
