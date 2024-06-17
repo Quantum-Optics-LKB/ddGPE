@@ -149,6 +149,9 @@ class ggpe():
         self.hopfield_coefs = cp.zeros((2, self.Nx, self.Ny), dtype=np.complex64)  #self.hopfield_coefs[0,:,:]=Xk and self.hopfield_coefs[1,:,:]=Ck
         self.hopfield_coefs[1, :, :] = cp.sqrt((cp.sqrt((self.omega[1, :, :] - self.omega[0, :, :]) ** 2 + 4 * self.rabi ** 2) - (self.omega[1, :, :] - self.omega[0, :, :])) / (2 * cp.sqrt((self.omega[1, :, :] - self.omega[0, :, :]) ** 2 + 4 * self.rabi ** 2)))
         self.hopfield_coefs[0, :, :] = cp.sqrt(1 - self.hopfield_coefs[1, :, :] ** 2)
+        self.X02 = np.min(self.hopfield_coefs[0, :, :] ** 2)
+        print("X02 = " + str(self.X02))
+        print("C02 = " + str(1 - self.X02))
         
         # Build diagonal propagator in Fourier space
         omega_up = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
@@ -227,7 +230,7 @@ class ggpe():
         self.kernels.laser_excitation(phi_cav, self.F_pump, self.F_pump_r, self.F_pump_t[k], self.F_probe, self.F_probe_r, self.F_probe_t[...,k], self.dt)
         self.kernels.boundary_losses(phi_cav, self.dt, self.v_gamma)
         self.kernels.apply_potential(phi_cav, self.dt, self.potential)
-        self.kernels.non_linearity(phi_exc, phi_cav, den_reservoir, self.dt, self.g0)
+        self.kernels.non_linearity(phi_exc, phi_cav, den_reservoir, self.dt, self.g0, self.X02)
         if self.apply_reservoir:
             self.kernels.reservoir_losses(den_reservoir, phi_exc, phi_cav, self.dt, self.gamma_res, self.gamma_exc, self.gamma_cav)
         #Fourier space
@@ -268,12 +271,16 @@ class ggpe():
         
         if len(self.F_probe_t.shape) == 1 and len(self.F_probe_r.shape) == 2:
             self.phi = cp.zeros((2, self.Nx, self.Ny), dtype=np.complex64)
+            self.den_reservoir = cp.zeros((self.Nx, self.Ny), dtype=np.complex64)
         elif len(self.F_probe_t.shape) == 1 and len(self.F_probe_r.shape) > 2:
             self.phi = cp.zeros((2, self.F_probe_r.shape[0], 1, self.Nx, self.Ny), dtype=np.complex64)
+            self.den_reservoir = cp.zeros((self.F_probe_r.shape[0], 1, self.Nx, self.Ny), dtype=np.complex64)
         elif len(self.F_probe_t.shape) > 1 and len(self.F_probe_r.shape) == 2:
             self.phi = cp.zeros((2, 1, self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64)
+            self.den_reservoir = cp.zeros((1, self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64)
         else:
             self.phi = cp.zeros((2, self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64)
+            self.den_reservoir = cp.zeros((self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64)
         
         stationary = 0
         save_fields = 1
@@ -281,15 +288,17 @@ class ggpe():
         if initial_state is not None:
             self.phi[0, ... , :, :] = initial_state[0, :, :]
             self.phi[1, ... , :, :] = initial_state[1, :, :]
+            self.den_reservoir = initial_state[2, :, :]
             stationary = 1
                 
         self.phi_pol = cp.zeros(self.phi.shape, dtype=np.complex64)
-        self.den_reservoir = cp.zeros(self.phi[0].shape, dtype=np.complex64)
-        
+
         self.mean_cav_t_x_y = None
         self.mean_exc_t_x_y = None
+        self.mean_den_reservoir_t_x_y = None
         self.mean_cav_x_y_stat = None
         self.mean_exc_x_y_stat = None
+        self.mean_den_reservoir_x_y_stat = None
         self.mean_cav_t_save = None
         self.mean_exc_t_save = None
         self.F_t = None
@@ -308,12 +317,14 @@ class ggpe():
         if save and stationary == 1:
             self.mean_cav_t_x_y = cp.zeros(self.phi[1, ... , :, :].shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
             self.mean_exc_t_x_y = cp.zeros(self.phi[0, ... , :, :].shape[0:-2]+(self.n_frame,self.Nx, self.Ny), dtype=np.complex64)
+            self.mean_den_reservoir_t_x_y = cp.zeros(self.den_reservoir.shape[0:-2]+(self.n_frame, self.Nx, self.Ny), dtype=np.complex64)
             self.F_t = cp.zeros(self.n_frame, dtype=np.float32)
             r_t = 0
             i_frame = 0
         if save_fields_at_time > 0:
             self.mean_cav_t_save = cp.zeros(self.phi[1, ... , :, :].shape, dtype=np.complex64)
             self.mean_exc_t_save = cp.zeros(self.phi[0, ... , :, :].shape, dtype=np.complex64)
+            self.mean_den_reservoir_t_save = cp.zeros(self.den_reservoir.shape, dtype=np.complex64)
             self.F_t = cp.zeros(self.n_frame, dtype=np.float32)
             save_fields = 0
         

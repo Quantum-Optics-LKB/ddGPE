@@ -64,7 +64,8 @@ def non_linearity(
     phi_cav: cp.ndarray,
     den_reservoir: cp.ndarray,
     dt: float,
-    g0: float
+    g0: float,
+    X02: float
 ) -> None:
     """A fused kernel to apply non linearity term
 
@@ -73,8 +74,10 @@ def non_linearity(
         dt (float): Propagation step in ps
         g0 (float): Interaction constant/coupling parameter
     """
+    #2 possibilities:
+    #phi_exc *= cp.exp(-1j * dt * g0 * (cp.abs(phi_exc) ** 2 + den_reservoir))
+    #phi_cav *= cp.exp(-1j * dt * g0 * den_reservoir)
     phi_exc *= cp.exp(-1j * dt * g0 * (cp.abs(phi_exc) ** 2 + den_reservoir))
-    phi_cav *= cp.exp(-1j * dt * g0 * den_reservoir)
     
 @cp.fuse(kernel_name="linear_step")
 def linear_step(

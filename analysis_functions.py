@@ -103,7 +103,6 @@ def movies(
 ):
     """Create movies of the density and phase of the field.
     """
-    print(field_txy.shape)
     field_txy = field_txy.get()
     size = (field_txy[0].shape)
     fps = 15
