@@ -1,5 +1,9 @@
 README.md
 setup.py
+ddGPE/__init__.py
+ddGPE/field_creation_functions.py
+ddGPE/ggpe2d.py
+ddGPE/kernels.py
 ddGPE.egg-info/PKG-INFO
 ddGPE.egg-info/SOURCES.txt
 ddGPE.egg-info/dependency_links.txt
