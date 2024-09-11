@@ -16,9 +16,11 @@ def load_raw_data(
     
     mean_cav_t_x_y = np.load(folder + "/raw_arrays/mean_cav_t_x_y.npy")
     mean_exc_t_x_y = np.load(folder + "/raw_arrays/mean_exc_t_x_y.npy")
+    mean_den_reservoir_t_x_y = np.load(folder + "/raw_arrays/mean_den_reservoir_t_x_y.npy")
     if path_ic is None:
         stationary_cav_x_y = np.load(folder + "/raw_arrays/stationary_cav_x_y.npy")
         stationary_exc_x_y = np.load(folder + "/raw_arrays/stationary_exc_x_y.npy")
+        stationary_den_reservoir_x_y = np.load(folder + "/raw_arrays/stationary_den_reservoir_x_y.npy")
     else:
         stationary_cav_x_y = np.load(path_ic + "/raw_arrays/stationary_cav_x_y.npy")
         stationary_exc_x_y = np.load(path_ic + "/raw_arrays/stationary_exc_x_y.npy")
@@ -26,9 +28,9 @@ def load_raw_data(
     F_t = np.load(folder + "/raw_arrays/F_t.npy")
     
     if only_stationary == True:
-        return cp.asarray(stationary_cav_x_y), cp.asarray(stationary_exc_x_y)
+        return cp.asarray(stationary_cav_x_y), cp.asarray(stationary_exc_x_y), cp.asarray(stationary_den_reservoir_x_y)
     else:
-        return cp.asarray(mean_cav_t_x_y), cp.asarray(mean_exc_t_x_y), cp.asarray(stationary_cav_x_y), cp.asarray(stationary_exc_x_y), cp.asarray(hopfield_coefs), cp.asarray(F_t)
+        return cp.asarray(mean_cav_t_x_y), cp.asarray(mean_exc_t_x_y), cp.asarray(mean_den_reservoir_t_x_y), cp.asarray(stationary_cav_x_y), cp.asarray(stationary_exc_x_y), cp.asarray(stationary_den_reservoir_x_y), cp.asarray(hopfield_coefs), cp.asarray(F_t)
 
 def config_plots():
     """Configuration of the plots
