@@ -5,7 +5,6 @@ import matplotlib
 import cv2
 #from polar_projection import reproject_image_into_polar
 
-
 def load_raw_data(
     folder, 
     path_ic = None, 

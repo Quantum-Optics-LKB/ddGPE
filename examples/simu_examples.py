@@ -1,10 +1,10 @@
 import cupy as cp
-from ggpe2d import ggpe
-import field_creation_functions as fc
+from ddGPE import ddgpe2d
+import ddGPE.field_creation_functions as fc
 import physical_constants as cte
 import os
-from analysis_functions import load_raw_data
-import analysis_functions as af
+from ddGPE.analysis_functions import load_raw_data
+import ddGPE.analysis_functions as af
 import numpy as np
 import matplotlib.pyplot as plt
 import configparser
@@ -144,7 +144,7 @@ omega_probe = 0
 k_probe = 0
 
 apply_reservoir = True
-simu = ggpe(cte.omega_exc, cte.omega_cav, cte.gamma_exc, cte.gamma_cav, cte.gamma_res, apply_reservoir, cte.g0, cte.rabi, cte.k_z,
+simu = ddgpe2d.ggpe(cte.omega_exc, cte.omega_cav, cte.gamma_exc, cte.gamma_cav, cte.gamma_res, apply_reservoir, cte.g0, cte.rabi, cte.k_z,
             detuning, F_pump, F_probe, cst,
             t_max, t_stationary, t_obs, dt_frame, t_noise,
             Lx, Ly, Nx, Ny)

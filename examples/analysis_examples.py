@@ -1,7 +1,7 @@
 import numpy as np
 import cupy as cp
 import matplotlib.pyplot as plt
-import analysis_functions as af
+import ddGPE.analysis_functions as af
 import configparser
 
 # In this file you may find the analysis of the 3 simulation examples that can be found in this folder. 
