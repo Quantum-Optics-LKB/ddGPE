@@ -23,7 +23,6 @@ def load_raw_data(
     else:
         stationary_cav_x_y = np.load(path_ic + "/raw_arrays/stationary_cav_x_y.npy")
         stationary_exc_x_y = np.load(path_ic + "/raw_arrays/stationary_exc_x_y.npy")
-        stationary_den_reservoir_x_y = np.load(path_ic + "/raw_arrays/stationary_den_reservoir_x_y.npy")
     hopfield_coefs = np.load(folder + "/raw_arrays/hopfield_coefs.npy")
     F_t = np.load(folder + "/raw_arrays/F_t.npy")
     

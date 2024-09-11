@@ -1,6 +1,7 @@
 README.md
 setup.py
 ddGPE/__init__.py
+ddGPE/analysis_functions.py
 ddGPE/ddgpe2d.py
 ddGPE/field_creation_functions.py
 ddGPE/kernels.py
