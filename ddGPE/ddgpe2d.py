@@ -264,8 +264,6 @@ class ggpe():
         Args:
             initial_state (cp.ndarray, optional): Initial state of the system. Defaults to None.
             save (bool, optional): Save the data. Defaults to True.
-        
-        
         """
         print("dt = " + str(self.dt))
         

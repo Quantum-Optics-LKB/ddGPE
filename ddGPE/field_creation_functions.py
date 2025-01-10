@@ -253,8 +253,8 @@ def turn_on(
 
 def tempo_probe(
     F_probe_t: cp.ndarray, 
-    omega_probe: float, 
-    t_probe, 
+    omega_probe: float,
+    t_probe,
     time: cp.ndarray
 ):
     """A function to create the spatial evolution of the probe field
@@ -293,11 +293,21 @@ def step_ramp(
     t_ramp: float,	
     time: cp.ndarray
 ):
+    """A function to create a step ramp temporal evolution of the probe field
+
+    Args:
+        F_probe_t (cp.ndarray): self.F_probe_t as defined in class ggpe, cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        omega_start (float): starting frequency of the probe
+        omega_end (float): ending frequency of the probe
+        omega_resol (float): frequency resolution of the steps
+        t_probe (float): time at which we turn on the probe
+        t_ramp (float): duration of the ramp
+        time (cp.ndarray): array with the value of the time at each discretized step
+    """
     omega_step = (omega_end - omega_start) / omega_resol
     t_step = t_ramp / omega_resol
     omega_t = omega_start + omega_step * (time - t_probe) // t_step
-    F_probe_t[..., :] = cp.exp(-1j * omega_t)
-    F_probe_t[..., time < t_probe] = 0
+    F_probe_t[..., :] = F_probe_t[..., :] * cp.exp(-1j * omega_t)
     profile = "Time profile: step_ramp, omega_start = " + str(omega_start) + ", omega_end = " + str(omega_end) + ", omega_resol = " + str(omega_resol) + ", t_probe = " + str(t_probe) + ", t_ramp = " + str(t_ramp) + " "
     return profile
     
