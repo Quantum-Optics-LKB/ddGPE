@@ -244,7 +244,7 @@ def turn_on(
         time (cp.ndarray):  array with the value of the time at each discretized step
         t_up (int, optional): time taken to reach the maximum intensity (=F). Defaults to 200.
     """
-    F_laser_t[time < t_up] = cp.exp(-1 * (time[time < t_up] - t_up)**2 / (t_up / 2))
+    F_laser_t[time < t_up] = cp.exp(-1 * (time[time < t_up] - t_up)**2 / (t_up/2)**2)
     F_laser_t[time >= t_up] = 1
     profile = "Time profile: turn_on_pump, t_up = " + str(t_up) + " "
     return profile
@@ -288,7 +288,7 @@ def step_ramp(
     F_probe_t: cp.ndarray, 
     omega_start: float,
     omega_end: float,
-    omega_resol: float,
+    nb_steps: int,
     t_probe: float, 
     t_ramp: float,	
     time: cp.ndarray
@@ -304,11 +304,15 @@ def step_ramp(
         t_ramp (float): duration of the ramp
         time (cp.ndarray): array with the value of the time at each discretized step
     """
-    omega_step = (omega_end - omega_start) / omega_resol
-    t_step = t_ramp / omega_resol
-    omega_t = omega_start + omega_step * (time - t_probe) // t_step
-    F_probe_t[..., :] = F_probe_t[..., :] * cp.exp(-1j * omega_t)
-    profile = "Time profile: step_ramp, omega_start = " + str(omega_start) + ", omega_end = " + str(omega_end) + ", omega_resol = " + str(omega_resol) + ", t_probe = " + str(t_probe) + ", t_ramp = " + str(t_ramp) + " "
+    omega_step = (omega_end - omega_start) / nb_steps
+    t_step = t_ramp / nb_steps
+    
+    omega_t = omega_start + omega_step * cp.floor((time - t_probe) / t_step)
+    print(omega_step)
+    print(omega_t)
+    
+    F_probe_t[..., :] = F_probe_t[..., :] * cp.exp(-1j * omega_t * (time-t_probe))
+    profile = "Time profile: step_ramp, omega_start = " + str(omega_start) + ", omega_end = " + str(omega_end) + ", omega_resol = " + str(nb_steps) + ", t_probe = " + str(t_probe) + ", t_ramp = " + str(t_ramp) + " "
     return profile
     
     
