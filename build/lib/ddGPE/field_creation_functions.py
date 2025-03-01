@@ -255,6 +255,7 @@ def tempo_probe(
     F_probe_t: cp.ndarray, 
     omega_probe: float,
     t_probe,
+    t_probe_end,
     time: cp.ndarray
 ):
     """A function to create the spatial evolution of the probe field
@@ -267,6 +268,7 @@ def tempo_probe(
     """
     F_probe_t[..., :] = cp.exp(-1j * (time - t_probe) * omega_probe)
     F_probe_t[..., time < t_probe] = 0
+    F_probe_t[..., time > t_probe_end] = 0
     profile = "Time profile: tempo_probe, omega_probe = " + str(omega_probe) + " "
     return profile
 
