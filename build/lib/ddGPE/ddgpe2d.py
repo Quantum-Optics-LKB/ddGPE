@@ -167,13 +167,13 @@ class ggpe():
         self.v_gamma = cp.zeros((self.Nx, self.Ny), dtype=np.complex64)
         delta_gamma_1 = self.Lx / 25
         delta_gamma_2 = self.Ly / 25
-        gamma_border = 20 * self.gamma_cav
+        self.gamma_border = 20 * self.gamma_cav
         id_x_1, id_x_2 = cp.ones(self.XX.shape, dtype = cp.complex64), cp.ones(self.YY.shape, dtype = cp.complex64)
         A = (cp.exp(-0.5 * (cp.multiply(cp.transpose(id_x_1), self.YY + self.Ly / 2) ** 2 / delta_gamma_2 ** 2)) +
                 cp.exp(-0.5 * (self.Ly - (cp.multiply(cp.transpose(id_x_1), self.YY + self.Ly / 2))) ** 2 / delta_gamma_2 ** 2))
         B = (cp.exp(-0.5 * (cp.multiply(cp.transpose(self.X + self.Lx / 2), id_x_2) ** 2 / delta_gamma_1 ** 2)) + cp.exp(-0.5 * (
             self.Lx - (cp.multiply(cp.transpose(self.X + self.Lx / 2), id_x_2))) ** 2 / delta_gamma_1 ** 2))
-        self.v_gamma = gamma_border * (A + B) / (A * B + 1)
+        self.v_gamma = self.gamma_border * (A + B) / (A * B + 1)
         
         #Fields
         self.phi = None
