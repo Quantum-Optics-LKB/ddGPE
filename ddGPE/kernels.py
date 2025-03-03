@@ -25,8 +25,8 @@ def laser_excitation(
     """
     phi_cav = F_pump * F_pump_r * F_pump_t * dt 
     phi_cav = F_probe * F_probe_r * F_probe_t * dt 
-    
-    
+
+
 @cp.fuse(kernel_name="boundary_losses")
 def boundary_losses(
     phi_cav: cp.ndarray, 
