@@ -23,10 +23,10 @@ def laser_excitation(
         F_probe_t (cp.ndarray): Temporal dependency of the probe field at corresponding time
         dt (float): Propagation step in ps
     """
-    phi_cav = F_pump * F_pump_r * F_pump_t * dt * 1j
-    phi_cav = F_probe * F_probe_r * F_probe_t * dt * 1j
-    
-    
+    phi_cav = F_pump * F_pump_r * F_pump_t * dt 
+    phi_cav = F_probe * F_probe_r * F_probe_t * dt 
+
+
 @cp.fuse(kernel_name="boundary_losses")
 def boundary_losses(
     phi_cav: cp.ndarray, 
