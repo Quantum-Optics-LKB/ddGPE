@@ -10,7 +10,6 @@ except:
 
 class ggpe():
     
-    rubidium
     def __init__(
         self, 
         omega_exc: float, 
