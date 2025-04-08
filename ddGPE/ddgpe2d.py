@@ -186,8 +186,6 @@ class ggpe():
         self.pump_temporal_profile = "Default: constant"
         self.probe_temporal_profile = "Default: constant"
         
-        
-    #FFT plans
     def build_fft_plans(self, A: cp.ndarray):
         """Builds the FFT plan objects for propagation, will transform the last two axes of the array
 
@@ -345,7 +343,7 @@ class ggpe():
                 save_fields += 1
             if k * self.dt >= self.t_obs and save:
                 r_t += self.dt
-                if r_t >= self.dt_frame:
+                if r_t >= self.dt_frame - 1e-10:
                     self.mean_cav_t_x_y[..., i_frame, :, :] = self.phi[1, ... , :, :]
                     self.mean_exc_t_x_y[..., i_frame, :, :] = self.phi[0, ... , :, :]
                     self.mean_den_reservoir_t_x_y[..., i_frame, :, :] = self.den_reservoir
