@@ -140,7 +140,7 @@ class ggpe():
         # cst = 4 #increase cst if you see fluctuations
         # self.dt = 1 / (omega_max * cst)
         # self.time = cp.arange(0, self.t_max, self.dt)
-        self.n_frame = int((self.t_max - self.t_obs) / self.dt_frame) + 1
+        self.n_frame = int((self.t_max - self.t_obs) / self.dt_frame)
         self.omega_list = 2 * cp.pi * cp.fft.fftshift(cp.fft.fftfreq(self.n_frame, self.dt_frame))
         
         
@@ -343,7 +343,7 @@ class ggpe():
                 save_fields += 1
             if k * self.dt >= self.t_obs and save:
                 r_t += self.dt
-                if r_t >= self.dt_frame - 1e-10:
+                if r_t >= self.dt_frame:
                     self.mean_cav_t_x_y[..., i_frame, :, :] = self.phi[1, ... , :, :]
                     self.mean_exc_t_x_y[..., i_frame, :, :] = self.phi[0, ... , :, :]
                     self.mean_den_reservoir_t_x_y[..., i_frame, :, :] = self.den_reservoir

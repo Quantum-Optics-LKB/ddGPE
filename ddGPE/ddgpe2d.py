@@ -344,6 +344,7 @@ class ggpe():
             if k * self.dt >= self.t_obs and save:
                 r_t += self.dt
                 if r_t >= self.dt_frame:
+                    print("k = "+str(k)+", t = "+str(k * self.dt)+" ps")
                     self.mean_cav_t_x_y[..., i_frame, :, :] = self.phi[1, ... , :, :]
                     self.mean_exc_t_x_y[..., i_frame, :, :] = self.phi[0, ... , :, :]
                     self.mean_den_reservoir_t_x_y[..., i_frame, :, :] = self.den_reservoir
