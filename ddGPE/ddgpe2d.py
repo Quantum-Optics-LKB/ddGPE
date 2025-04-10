@@ -143,24 +143,32 @@ class ggpe():
         self.n_frame = int((self.t_max - self.t_obs) / self.dt_frame)
         self.omega_list = 2 * cp.pi * cp.fft.fftshift(cp.fft.fftfreq(self.n_frame, self.dt_frame))
         
-        
-        
-        #Hopfield coefficients in Fourier space
-        self.hopfield_coefs = cp.zeros((2, self.Nx, self.Ny), dtype=np.complex64)  #self.hopfield_coefs[0,:,:]=Xk and self.hopfield_coefs[1,:,:]=Ck
-        self.hopfield_coefs[1, :, :] = cp.sqrt((cp.sqrt((self.omega[1, :, :] - self.omega[0, :, :]) ** 2 + 4 * self.rabi ** 2) - (self.omega[1, :, :] - self.omega[0, :, :])) / (2 * cp.sqrt((self.omega[1, :, :] - self.omega[0, :, :]) ** 2 + 4 * self.rabi ** 2)))
-        self.hopfield_coefs[0, :, :] = cp.sqrt(1 - self.hopfield_coefs[1, :, :] ** 2)
-        self.X02 = np.min(self.hopfield_coefs[0, :, :] ** 2)
-        print("X02 = " + str(self.X02))
-        print("C02 = " + str(1 - self.X02))
-        
         # Build diagonal propagator in Fourier space
-        self.omega_up = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
-                + cp.sqrt((self.omega[0, :, :] - self.omega[1, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2))
-        self.omega_lp = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
-                - cp.sqrt((self.omega[0, :, :] - self.omega[1, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2))
+        self.omega_up = 0.5* (self.omega[1, :, :] + self.omega[0, :, :] - 0.5 * 1j * (self.gamma[1, :, :] + self.gamma[0, :, :])
+                + cp.sqrt((self.omega[1, :, :] - self.omega[0, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2))
+        self.omega_lp = 0.5* (self.omega[1, :, :] + self.omega[0, :, :] - 0.5 * 1j * (self.gamma[1, :, :] + self.gamma[0, :, :])
+                - cp.sqrt((self.omega[1, :, :] - self.omega[0, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2))
         self.propagator_diag = cp.zeros((2, self.Nx, self.Ny), dtype=cp.complex64)
         self.propagator_diag[0, :, :] = cp.exp(-1j * self.dt * self.omega_lp)
         self.propagator_diag[1, :, :] = cp.exp(-1j * self.dt * self.omega_up)
+        #warning: Note that gammas are definined such that im(w_lp) = -gamma_lp/2
+        # Hopfield coefficients (complex amplitudes, from omega_lp only)
+        omega_exc_complex = self.omega[0, :, :] - 0.5j * self.gamma[0, :, :]
+        delta_lp = self.omega_lp - omega_exc_complex
+        norm = cp.sqrt(cp.abs(delta_lp)**2 + self.rabi**2)
+
+        C_lp = delta_lp / norm    # cavity component
+        X_lp = self.rabi / norm   # exciton component
+
+        # Store complex amplitudes directly
+        self.hopfield_coefs = cp.zeros((2, self.Nx, self.Ny), dtype=cp.complex64)
+        self.hopfield_coefs[1, :, :] = C_lp  # complex C (cavity)
+        self.hopfield_coefs[0, :, :] = X_lp  # complex X (exciton)
+
+        self.X02 = cp.min(cp.abs(X_lp)**2)
+        print("X02 = " + str(self.X02))
+        print("C02 = " + str(1 - self.X02))
+        
         #Potential and losses at boundary in real space
         self.potential = cp.zeros((self.Nx, self.Ny), dtype=np.complex64)
         self.potential_profile = "Default: none"
