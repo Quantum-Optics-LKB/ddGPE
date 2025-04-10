@@ -154,13 +154,13 @@ class ggpe():
         print("C02 = " + str(1 - self.X02))
         
         # Build diagonal propagator in Fourier space
-        omega_up = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
+        self.omega_up = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
                 + cp.sqrt((self.omega[0, :, :] - self.omega[1, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2))
-        omega_lp = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
+        self.omega_lp = 0.5* (self.omega[0, :, :] + self.omega[1, :, :] - 0.5j * (self.gamma[0, :, :] + self.gamma[1, :, :])
                 - cp.sqrt((self.omega[0, :, :] - self.omega[1, :, :] - 0.5 * 1j * (self.gamma[1, :, :] - self.gamma[0, :, :])) ** 2 + 4 * self.rabi ** 2))
         self.propagator_diag = cp.zeros((2, self.Nx, self.Ny), dtype=cp.complex64)
-        self.propagator_diag[0, :, :] = cp.exp(-1j * self.dt * omega_lp)
-        self.propagator_diag[1, :, :] = cp.exp(-1j * self.dt * omega_up)
+        self.propagator_diag[0, :, :] = cp.exp(-1j * self.dt * self.omega_lp)
+        self.propagator_diag[1, :, :] = cp.exp(-1j * self.dt * self.omega_up)
         #Potential and losses at boundary in real space
         self.potential = cp.zeros((self.Nx, self.Ny), dtype=np.complex64)
         self.potential_profile = "Default: none"
