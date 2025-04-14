@@ -84,7 +84,7 @@ def linear_step(
     phi_exc: cp.ndarray,
     phi_cav: cp.ndarray,
     phi_up: cp.ndarray,
-    phi_lp: cp.ndarray, 
+    phi_lp: cp.ndarray,
     propagator_diag_lp: cp.ndarray,
     propagator_diag_up: cp.ndarray,
     X_hop: cp.ndarray,
