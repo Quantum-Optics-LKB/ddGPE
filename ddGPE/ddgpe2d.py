@@ -402,32 +402,40 @@ class ggpe:
         """
         print("dt = " + str(self.dt))
 
-        if len(self.F_probe_t.shape) == 1 and len(self.F_probe_r.shape) == 2:
-            self.phi = cp.zeros((2, self.Nx, self.Ny), dtype=np.complex64)
-            self.den_reservoir = cp.zeros((self.Nx, self.Ny), dtype=np.complex64)
-        elif len(self.F_probe_t.shape) == 1 and len(self.F_probe_r.shape) > 2:
-            self.phi = cp.zeros(
-                (2, self.F_probe_r.shape[0], 1, self.Nx, self.Ny), dtype=np.complex64
-            )
-            self.den_reservoir = cp.zeros(
-                (self.F_probe_r.shape[0], 1, self.Nx, self.Ny), dtype=np.complex64
-            )
-        elif len(self.F_probe_t.shape) > 1 and len(self.F_probe_r.shape) == 2:
-            self.phi = cp.zeros(
-                (2, 1, self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64
-            )
-            self.den_reservoir = cp.zeros(
-                (1, self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64
-            )
-        else:
-            self.phi = cp.zeros(
-                (2, self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny),
-                dtype=np.complex64,
-            )
-            self.den_reservoir = cp.zeros(
-                (self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny),
-                dtype=np.complex64,
-            )
+        # if len(self.F_probe_t.shape) == 1 and len(self.F_probe_r.shape) == 2:
+        #     self.phi = cp.zeros((2, self.Nx, self.Ny), dtype=np.complex64)
+        #     self.den_reservoir = cp.zeros((self.Nx, self.Ny), dtype=np.complex64)
+        # elif len(self.F_probe_t.shape) == 1 and len(self.F_probe_r.shape) > 2:
+        #     self.phi = cp.zeros(
+        #         (2, self.F_probe_r.shape[0], 1, self.Nx, self.Ny), dtype=np.complex64
+        #     )
+        #     self.den_reservoir = cp.zeros(
+        #         (self.F_probe_r.shape[0], 1, self.Nx, self.Ny), dtype=np.complex64
+        #     )
+        # elif len(self.F_probe_t.shape) > 1 and len(self.F_probe_r.shape) == 2:
+        #     self.phi = cp.zeros(
+        #         (2, 1, self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64
+        #     )
+        #     self.den_reservoir = cp.zeros(
+        #         (1, self.F_probe_t.shape[1], self.Nx, self.Ny), dtype=np.complex64
+        #     )
+        # else:
+        #     self.phi = cp.zeros(
+        #         (2, self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny),
+        #         dtype=np.complex64,
+        #     )
+        #     self.den_reservoir = cp.zeros(
+        #         (self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny),
+        #         dtype=np.complex64,
+        #     )
+
+        self.phi = cp.zeros(
+            (2,) + (self.F_probe_r*self.F_probe_t[...,-1]).shape,
+            dtype=np.complex64,
+        )
+        self.den_reservoir = cp.zeros(
+            (self.F_probe_r*self.F_probe_t[...,-1]).shape, dtype=np.complex64,
+        )
 
         stationary = 0
         save_fields = 1
