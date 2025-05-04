@@ -428,6 +428,7 @@ class ggpe:
         #         (self.F_probe_r.shape[0], self.F_probe_t.shape[1], self.Nx, self.Ny),
         #         dtype=np.complex64,
         #     )
+            
 
         self.phi = cp.zeros(
             (2,) + (self.F_probe_r*self.F_probe_t[...,-1]).shape,
