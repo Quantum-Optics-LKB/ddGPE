@@ -144,7 +144,8 @@ def add_noise(phi_exc: cp.ndarray,
               v_gamma: cp.ndarray,
               gamma_exc: float,
               gamma_ph: float,
-              dv: float
+              dv: float,
+              noise_amplitude: float = 1.0
 ) -> None:
     """A fused kernel to add gaussian noise (additive white gaussian noise)
 
@@ -160,5 +161,5 @@ def add_noise(phi_exc: cp.ndarray,
     
     # phi1 += noise_exc*cp.sqrt(gamma_exc/(4*dv))*rand1
     # phi2 += noise_ph*cp.sqrt((v_gamma+gamma_ph)/(4*dv))*rand2
-    phi_exc += cp.sqrt(gamma_exc / (4 * dv)) * rand1
-    phi_cav += cp.sqrt((v_gamma + gamma_ph) / (4 * dv)) * rand2
+    phi_exc += noise_amplitude * cp.sqrt(gamma_exc / (4 * dv)) * rand1
+    phi_cav += noise_amplitude * cp.sqrt((v_gamma + gamma_ph) / (4 * dv)) * rand2

@@ -227,7 +227,7 @@ def bistab_cycle(
         time (cp.ndarray): array with the value of the time at each discretized step
         t_max (_type_): maximum time of the simulation
     """
-    F_laser_t[:] = 4 * cp.exp(-((time[:] - t_max // 2) / (t_max // 4)) ** 2)
+    F_laser_t[:] = 4 * cp.exp(-((time[:] - t_max // 2) / (t_max // 3)) ** 2)
     profile = "Time profile: bistab_cycle, t_max = " + str(t_max) + " "
     return profile
 
@@ -249,6 +249,28 @@ def turn_on(
     profile = "Time profile: turn_on_pump, t_up = " + str(t_up) + " "
     return profile
 
+def wave_packet(
+    F_probe_t: cp.ndarray, 
+    time: cp.ndarray, 
+    t_up=10,
+    t_down=10,
+    t_width=10
+):
+    """A function to create a wave_packet temporal evolution of the probe field
+
+    Args:
+        F_probe_t (cp.ndarray): self.F_probe_t as defined in class ggpe, cp.ones((int(self.t_max//self.dt)), dtype=cp.complex64)
+        time (cp.ndarray): array with the value of the time at each discretized step
+        t_up (int, optional): time taken to reach the maximum intensity (=F). Defaults to 10.
+        t_down (int, optional): time taken to reach the minimum intensity (=0). Defaults to 10.
+        t_width (int, optional): width of the wave packet. Defaults to 10.
+    """
+    F_probe_t[time < t_up] = cp.exp(-1 * (time[time < t_up] - t_up)**2 / (t_up/2)**2)
+    F_probe_t[(time >= t_up) & (time <= t_up + t_width)] = 1
+    F_probe_t[time > t_up + t_width] = cp.exp(-1 * (time[time > t_up + t_width] - (t_up + t_width))**2 / (t_down/2)**2)
+    profile = "Time profile: wave_packet, t_up = " + str(t_up) + ", t_down = " + str(t_down) + ", t_width = " + str(t_width) + " "
+    return profile
+
 #Temporal phase profiles:
 
 def tempo_probe(
@@ -266,7 +288,7 @@ def tempo_probe(
         t_probe (float): time at which we turn on the probe
         time (cp.ndarray): array with the value of the time at each discretized step
     """
-    F_probe_t[..., :] = cp.exp(-1j * (time - t_probe) * omega_probe)
+    F_probe_t[..., :] = F_probe_t[..., :] * cp.exp(-1j * (time - t_probe) * omega_probe)
     F_probe_t[..., time < t_probe] = 0
     F_probe_t[..., time > t_probe_end] = 0
     profile = "Time profile: tempo_probe, omega_probe = " + str(omega_probe) + " "

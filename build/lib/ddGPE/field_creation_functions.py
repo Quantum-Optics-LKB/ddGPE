@@ -227,7 +227,7 @@ def bistab_cycle(
         time (cp.ndarray): array with the value of the time at each discretized step
         t_max (_type_): maximum time of the simulation
     """
-    F_laser_t[:] = 4 * cp.exp(-((time[:] - t_max // 2) / (t_max // 4)) ** 2)
+    F_laser_t[:] = 4 * cp.exp(-((time[:] - t_max // 2) / (t_max // 3)) ** 2)
     profile = "Time profile: bistab_cycle, t_max = " + str(t_max) + " "
     return profile
 

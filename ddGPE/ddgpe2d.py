@@ -35,11 +35,12 @@ class ggpe:
         Ly: float = 256,
         Nx: int = 256,
         Ny: int = 256,
+        noise_amplitude: float = 1,
     ) -> object:
         """Instantiates the simulation.
 
         DESCRIPTION TO DO
-
+        
         Args:
             omega_exc (float): Exciton energy (meV/hbar)
             omega_cav (float): Cavity photon energy at k=0 (meV/hbar)
@@ -265,6 +266,8 @@ class ggpe:
         )
         self.v_gamma = self.gamma_border * (A + B) / (A * B + 1)
 
+        self.noise_amplitude = noise_amplitude
+        
         # Fields
         self.phi = None
         self.F_pump_r = cp.ones((Nx, Ny), dtype=cp.complex64)
@@ -384,6 +387,7 @@ class ggpe:
                 self.gamma_exc,
                 self.gamma_cav,
                 self.dv,
+                self.noise_amplitude,
             )
             # check complex normal distribution, circularly symmetric central case in wikipedia. If no mistake we have complex normal distribution
             # for the random variable Z=X+iY with std gamma (real) iff X and Y have std gamma/2
