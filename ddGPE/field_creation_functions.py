@@ -275,7 +275,7 @@ def turn_on(F_laser_t: cp.ndarray, time: cp.ndarray, t_up=200):
 
 
 def wave_packet(
-    F_probe_t: cp.ndarray, time: cp.ndarray, t_up=10, t_down=10, t_plateau=10
+    F_probe_t: cp.ndarray, time: cp.ndarray, t_up=10, t_down=1e9, t_plateau=10
 ):
     """A function to create a wave_packet temporal evolution of the probe field
 
