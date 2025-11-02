@@ -18,21 +18,7 @@ pip install .
 The dynamics of coupled photon and exciton fields in a polariton microcavity is given by the following coupled equations:
 
 $$
-\begin{aligned}
-i\hbar \frac{\partial \psi_X(\mathbf{r}, t)}{\partial t} &= 
-\Big[ E_X(\mathbf{k}) + V_X(\mathbf{r}) 
-+ \hbar g_X \big( |\psi_X(\mathbf{r}, t)|^2 + n_r(\mathbf{r}, t) \big) 
-- i\hbar \frac{\gamma_X + \gamma_{\mathrm{inc}}}{2} \Big]\psi_X(\mathbf{r}, t)
-+ \hbar \Omega_R\, \psi_C(\mathbf{r}, t), \\[6pt]
-i\hbar \frac{\partial \psi_C(\mathbf{r}, t)}{\partial t} &= 
-\Big[ E_C(\mathbf{k}) + V_C(\mathbf{r}) 
-- i\hbar \frac{\gamma_C + \gamma_{\mathrm{inc}}}{2} \Big]\psi_C(\mathbf{r}, t)
-+ \hbar \Omega_R\, \psi_X(\mathbf{r}, t)
-+ \hbar F(\mathbf{r}, t), \\[6pt]
-\frac{\partial n_r(\mathbf{r}, t)}{\partial t} &= 
-- \gamma_r\, n_r(\mathbf{r}, t)
-+ \gamma_{\mathrm{inc}}\big( |\psi_X(\mathbf{r}, t)|^2 + |\psi_C(\mathbf{r}, t)|^2 \big).
-\end{aligned}
+\begin{aligned} i\hbar\frac{d\psi_X}{dt}(\textbf{r}, t) &= \big(E_X(\textbf{k}) + V_X(\textbf{r}) + \hbar g_X (\psi_X|\psi_X(\textbf{r}, t)|^2 + n_r(\textbf{r}, t)) + \hbar\Omega_R\psi_C(\textbf{r}, t) - i\hbar\frac{\gamma_X+\gamma_{inc}}{2}\big)\psi_X(\textbf{r}, t) \\ i\hbar\frac{d\psi_C}{dt}(\textbf{r}, t) &= \big(E_C(\textbf{k}) + V_C(\textbf{r}) + \hbar\Omega_R\psi_X(\textbf{r}, t) - i\hbar\frac{\gamma_C+\gamma_{inc}}{2}\big)\psi_C(\textbf{r}, t) + \hbar F(\textbf{r},t) \\ \frac{dn_r}{dt}(\textbf{r}, t) &= -\gamma_{r}n_r+\gamma_{inc}(|\psi_X(\textbf{r}, t)|^2+|\psi_C(\textbf{r}, t)|^2) \end{aligned}
 $$
 
 where
