@@ -136,14 +136,15 @@ def vortex_beam(
     )
     return profile
 
+
 def transonic_phase(
     F_laser_r: cp.ndarray,
     YY: cp.ndarray,
-    k_up :float,
-    k_down :float,
-    xh :float ,
-    wh : float,
-    ):
+    k_up: float,
+    k_down: float,
+    xh: float,
+    wh: float,
+):
     """A function to create a transonic flow spatial mode for the laser pump field
     Args:
         F_laser_r (cp.ndarray): self.F_laser_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
@@ -154,21 +155,32 @@ def transonic_phase(
         wh (float): width of the horizon region
 
     """
-    phase = (k_down-k_up)/2*wh*cp.log(cp.cosh((YY-xh)/wh)) + (k_up+k_down)/2*YY
+    phase = (k_down - k_up) / 2 * wh * cp.log(cp.cosh((YY - xh) / wh)) + (
+        k_up + k_down
+    ) / 2 * YY
     F_laser_r[..., :, :] = F_laser_r[..., :, :] * cp.exp(1j * phase[:, :])
     profile = (
-        "Transonic flow, k_up = " + str(k_up) + ", k_down = " + str(k_down) + ", wh = " + str(wh) + ", xh = " + str(xh) + " ; "
+        "Transonic flow, k_up = "
+        + str(k_up)
+        + ", k_down = "
+        + str(k_down)
+        + ", wh = "
+        + str(wh)
+        + ", xh = "
+        + str(xh)
+        + " ; "
     )
     return profile
+
 
 def step_like_intensity(
     F_laser_r: cp.ndarray,
     YY: cp.ndarray,
-    F_up :float,
-    F_down :float,
-    xh :float ,
-    wh : float,
-    ):
+    F_up: float,
+    F_down: float,
+    xh: float,
+    wh: float,
+):
     """A function to create a step-like intensity spatial mode for the laser pump field
     Args:
         F_laser_r (cp.ndarray): self.F_laser_r as defined in class ggpe, cp.ones((n_max1, n_max2)cp.complex64)
