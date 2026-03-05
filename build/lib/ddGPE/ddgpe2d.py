@@ -537,31 +537,31 @@ class ggpe:
                     self.F_t[i_frame] = cp.max(cp.abs(self.F_pump_t[k] * self.F_pump))
                     i_frame += 1
                     r_t = 0
-                    if callback is not None:
-                        # normalize callback_args
-                        if callback_args is None:
-                            callback_args = ()
+            if callback is not None:
+                # normalize callback_args
+                if callback_args is None:
+                    callback_args = ()
 
-                        # single callback
-                        if isinstance(callback, Callable):
-                            callback(self, self.phi, k, k * self.dt, *callback_args)
+                # single callback
+                if isinstance(callback, Callable):
+                    callback(self, self.phi, k, k * self.dt, *callback_args)
 
-                        # list of callbacks (each with its own args tuple)
-                        elif (
-                            isinstance(callback, list)
-                            and callback
-                            and all(isinstance(c, Callable) for c in callback)
-                        ):
-                            # if user passed a single tuple instead of list-of-tuples, broadcast it
-                            if isinstance(callback_args, tuple):
-                                callback_args = [callback_args] * len(callback)
-                            elif callback_args == ():
-                                callback_args = [()] * len(callback)
+                # list of callbacks (each with its own args tuple)
+                elif (
+                    isinstance(callback, list)
+                    and callback
+                    and all(isinstance(c, Callable) for c in callback)
+                ):
+                    # if user passed a single tuple instead of list-of-tuples, broadcast it
+                    if isinstance(callback_args, tuple):
+                        callback_args = [callback_args] * len(callback)
+                    elif callback_args == ():
+                        callback_args = [()] * len(callback)
 
-                            for c, ca in zip(callback, callback_args):
-                                c(self, self.phi, k, k * self.dt, *ca)
+                    for c, ca in zip(callback, callback_args):
+                        c(self, self.phi, k, k * self.dt, *ca)
 
-                        else:
-                            raise ValueError(
-                                "callback must be a Callable or a non-empty list of Callables"
-                            )
+                else:
+                    raise ValueError(
+                        "callback must be a Callable or a non-empty list of Callables"
+                    )
