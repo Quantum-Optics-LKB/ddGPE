@@ -2,6 +2,7 @@ import numpy as np
 import cupy as cp
 import cupyx.scipy.fftpack as fftpack
 from tqdm import tqdm
+from typing import Any, Callable, Union
 
 try:
     from . import kernels
@@ -39,8 +40,6 @@ class ggpe:
     ) -> object:
         """Instantiates the simulation.
 
-        DESCRIPTION TO DO
-        
         Args:
             omega_exc (float): Exciton energy (meV/hbar)
             omega_cav (float): Cavity photon energy at k=0 (meV/hbar)
@@ -267,7 +266,7 @@ class ggpe:
         self.v_gamma = self.gamma_border * (A + B) / (A * B + 1)
 
         self.noise_amplitude = noise_amplitude
-        
+
         # Fields
         self.phi = None
         self.F_pump_r = cp.ones((Nx, Ny), dtype=cp.complex64)
@@ -397,6 +396,8 @@ class ggpe:
         initial_state: cp.ndarray = None,
         save_fields_at_time: float = 0,
         save: bool = True,
+        callback: Callable | list[Callable] | None = None,
+        callback_args: tuple | list[tuple] | None = None,
     ) -> cp.ndarray:
         """Evolve the system for a given time
 
@@ -406,11 +407,12 @@ class ggpe:
         """
 
         self.phi = cp.zeros(
-            (2,) + (self.F_probe_r*self.F_probe_t[...,-1]).shape,
+            (2,) + (self.F_probe_r * self.F_probe_t[..., -1]).shape,
             dtype=np.complex64,
         )
         self.den_reservoir = cp.zeros(
-            (self.F_probe_r*self.F_probe_t[...,-1]).shape, dtype=np.complex64,
+            (self.F_probe_r * self.F_probe_t[..., -1]).shape,
+            dtype=np.complex64,
         )
 
         stationary = 0
@@ -535,3 +537,31 @@ class ggpe:
                     self.F_t[i_frame] = cp.max(cp.abs(self.F_pump_t[k] * self.F_pump))
                     i_frame += 1
                     r_t = 0
+                    if callback is not None:
+                        # normalize callback_args
+                        if callback_args is None:
+                            callback_args = ()
+
+                        # single callback
+                        if isinstance(callback, Callable):
+                            callback(self, self.phi, k, k * self.dt, *callback_args)
+
+                        # list of callbacks (each with its own args tuple)
+                        elif (
+                            isinstance(callback, list)
+                            and callback
+                            and all(isinstance(c, Callable) for c in callback)
+                        ):
+                            # if user passed a single tuple instead of list-of-tuples, broadcast it
+                            if isinstance(callback_args, tuple):
+                                callback_args = [callback_args] * len(callback)
+                            elif callback_args == ():
+                                callback_args = [()] * len(callback)
+
+                            for c, ca in zip(callback, callback_args):
+                                c(self, self.phi, k, k * self.dt, *ca)
+
+                        else:
+                            raise ValueError(
+                                "callback must be a Callable or a non-empty list of Callables"
+                            )
