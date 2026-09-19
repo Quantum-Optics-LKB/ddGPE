@@ -130,9 +130,9 @@ def reservoir_losses(
     den_reservoir (cp.ndarray): Dark excitonic reservoir density
     phi_exc (cp.ndarray): Exciton field in ph,exc basis
     phi_cav (cp.ndarray): Photon field in ph,exc basis
-    gamma_res (float): Reservoir decay rate
-    gamma_exc (float): Exciton decay rate
-    gamma_ph (float): Photon decay rate
+    gamma_res (float): Coherent-to-reservoir conversion rate
+    gamma_exc (float): Reservoir decay rate, equal to the input gamma_exc (without conversion losses)
+    gamma_ph (float): Photon decay rate (unused)
     """
     den_reservoir += dt * (gamma_res * cp.abs(phi_exc)**2 + gamma_res * cp.abs(phi_cav)**2 - gamma_exc * den_reservoir)
     

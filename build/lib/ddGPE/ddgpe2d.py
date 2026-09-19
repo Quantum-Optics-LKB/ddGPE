@@ -68,8 +68,10 @@ class ggpe:
         # Physical parameters
         self.omega_exc = omega_exc
         self.omega_cav = omega_cav
+        # Reservoir decay equals the input gamma_exc, excluding conversion losses.
+        self.gamma_res_decay = gamma_exc
         if apply_reservoir:
-            self.gamma_exc = gamma_exc
+            self.gamma_exc = gamma_exc + gamma_res
             self.gamma_cav = gamma_cav + gamma_res
         else:
             self.gamma_exc = gamma_exc
@@ -339,7 +341,7 @@ class ggpe:
                 phi_cav,
                 self.dt,
                 self.gamma_res,
-                self.gamma_exc,
+                self.gamma_res_decay,
                 self.gamma_cav,
             )
         # Fourier space
